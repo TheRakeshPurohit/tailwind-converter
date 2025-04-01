@@ -146,9 +146,9 @@ const Home: NextPage = () => {
 
   return (
     <div className={darkMode ? "dark" : ""}>
-      <div className="relative h-screen w-full flex-col overflow-hidden bg-slate-200 dark:bg-zinc-800">
+      <div className="relative flex-col w-full h-screen overflow-hidden bg-slate-200 dark:bg-zinc-800">
         <div className="w-screen">
-          <div className="absolute left-2 flex">
+          <div className="absolute flex left-2">
             {darkMode ? (
               <button
                 onClick={() => {
@@ -162,7 +162,7 @@ const Home: NextPage = () => {
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="#fff"
-                  className="ml-2 h-6 w-6 hover:stroke-slate-400"
+                  className="w-6 h-6 ml-2 hover:stroke-slate-400"
                 >
                   <path
                     strokeLinecap="round"
@@ -180,7 +180,7 @@ const Home: NextPage = () => {
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="ml-2 h-6 w-6 hover:stroke-slate-400"
+                  className="w-6 h-6 ml-2 hover:stroke-slate-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="#000"
@@ -195,9 +195,9 @@ const Home: NextPage = () => {
               </button>
             )}
           </div>
-          <div className="mb-1 mt-2 flex w-1/2 justify-end">
+          <div className="flex justify-end w-1/2 mt-2 mb-1">
             <div
-              className="tooltip tooltip-bottom z-50 mr-3"
+              className="z-50 mr-3 tooltip tooltip-bottom"
               data-tip="Codepen preview"
             >
               <form
@@ -213,7 +213,7 @@ const Home: NextPage = () => {
                     strokeWidth={1.5}
                     fill={darkMode ? "#000" : "#f0f6f9"}
                     stroke={darkMode ? "#f0f6f9" : "#000"}
-                    className="h-6 w-6 hover:stroke-slate-400"
+                    className="w-6 h-6 hover:stroke-slate-400"
                   >
                     <path
                       strokeLinecap="round"
@@ -225,9 +225,9 @@ const Home: NextPage = () => {
               </form>
             </div>
           </div>
-          <div className="absolute right-4 top-2 flex">
+          <div className="absolute flex right-4 top-2">
             <div
-              className="tooltip tooltip-bottom z-50 mr-6"
+              className="z-50 mr-6 tooltip tooltip-bottom"
               data-tip="Codepen preview"
             >
               <form
@@ -243,7 +243,7 @@ const Home: NextPage = () => {
                     strokeWidth={1.5}
                     fill={darkMode ? "#000" : "#f0f6f9"}
                     stroke={darkMode ? "#f0f6f9" : "#000"}
-                    className="h-6 w-6 hover:stroke-slate-400"
+                    className="w-6 h-6 hover:stroke-slate-400"
                   >
                     <path
                       strokeLinecap="round"
@@ -254,7 +254,7 @@ const Home: NextPage = () => {
                 </button>
               </form>
             </div>
-            <div className="tooltip tooltip-bottom z-50 mr-6" data-tip="About">
+            <div className="z-50 mr-6 tooltip tooltip-bottom" data-tip="About">
               <div>
                 <label htmlFor="my-modal-4" className="cursor-pointer">
                   <svg
@@ -263,7 +263,7 @@ const Home: NextPage = () => {
                     strokeWidth={1.5}
                     fill={darkMode ? "#000" : "#f0f6f9"}
                     stroke={darkMode ? "#f0f6f9" : "#000"}
-                    className="h-6 w-6 hover:stroke-slate-400"
+                    className="w-6 h-6 hover:stroke-slate-400"
                   >
                     <path
                       strokeLinecap="round"
@@ -285,12 +285,12 @@ const Home: NextPage = () => {
                 />
                 <label
                   htmlFor="my-modal-4"
-                  className="modal cursor-pointer text-left"
+                  className="text-left cursor-pointer modal"
                 >
-                  <label className="modal-box relative bg-white text-black dark:bg-zinc-700 dark:text-gray-200">
+                  <label className="relative text-black bg-white modal-box dark:bg-zinc-700 dark:text-gray-200">
                     <label
                       htmlFor="my-modal-4"
-                      className="btn btn-circle btn-sm absolute right-2 top-2 border-none bg-gray-700 dark:bg-gray-900"
+                      className="absolute bg-gray-700 border-none btn btn-circle btn-sm right-2 top-2 dark:bg-gray-900"
                     >
                       ✕
                     </label>
@@ -310,7 +310,7 @@ const Home: NextPage = () => {
                       </a>
                       .
                     </p>
-                    <h3 className="mb-2 mt-4 text-lg font-bold">Note:</h3>
+                    <h3 className="mt-4 mb-2 text-lg font-bold">Note:</h3>
                     <h4 className="mb-2 font-bold">
                       *This project is a work in progress. There may be bugs or
                       incomplete features*
@@ -328,7 +328,7 @@ const Home: NextPage = () => {
                 </label>
               </div>
             </div>
-            <div className="tooltip tooltip-bottom z-50" data-tip="Github">
+            <div className="z-50 tooltip tooltip-bottom" data-tip="Github">
               <a
                 aria-label="github page"
                 href="https://github.com/kt474/tailwind-converter"
@@ -380,7 +380,7 @@ const Home: NextPage = () => {
               }}
             />
             <div
-              className="fixed bottom-2 ml-24 sm:-ml-1 md:absolute"
+              className="fixed ml-24 bottom-2 sm:-ml-1 md:absolute"
               style={resetButtonPosition}
             >
               <button
@@ -394,7 +394,7 @@ const Home: NextPage = () => {
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="mr-1 h-4 w-4"
+                  className="w-4 h-4 mr-1"
                 >
                   <path
                     strokeLinecap="round"
@@ -406,7 +406,7 @@ const Home: NextPage = () => {
               </button>
             </div>
             <div
-              className="fixed bottom-2 hidden sm:block md:absolute"
+              className="fixed hidden bottom-2 sm:block md:absolute"
               style={formatButtonPosition}
             >
               {tidy ? (
@@ -419,13 +419,13 @@ const Home: NextPage = () => {
                 </button>
               ) : (
                 <button
-                  className="btn btn-xs border-none bg-slate-300 text-black hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                  className="text-black border-none btn btn-xs bg-slate-300 hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                   title="format code"
                   onClick={formatCode}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="mr-1 h-4 w-4"
+                    className="w-4 h-4 mr-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -454,13 +454,13 @@ const Home: NextPage = () => {
                 </button>
               ) : (
                 <button
-                  className="btn btn-xs border-none bg-slate-300 text-black hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                  className="text-black border-none btn btn-xs bg-slate-300 hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                   title="convert code"
                   onClick={syncButton}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="mr-1 h-4 w-4"
+                    className="w-4 h-4 mr-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -496,12 +496,12 @@ const Home: NextPage = () => {
                 </button>
               ) : (
                 <button
-                  className="btn btn-xs border-none bg-slate-300 text-black hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 "
+                  className="text-black border-none btn btn-xs bg-slate-300 hover:bg-slate-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 "
                   onClick={copyToClipboard}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="mr-1 h-4 w-4"
+                    className="w-4 h-4 mr-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -523,11 +523,11 @@ const Home: NextPage = () => {
       {alert && (
         <div
           role="alert"
-          className="alert alert-warning absolute bottom-0 right-0 mb-3 mr-3 max-w-2xl"
+          className="absolute bottom-0 right-0 max-w-2xl mb-3 mr-3 alert alert-warning"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
+            className="w-6 h-6 stroke-current shrink-0"
             fill="none"
             viewBox="0 0 24 24"
           >
