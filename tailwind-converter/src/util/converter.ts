@@ -99,7 +99,6 @@ export const convertAttributes = (attributes: { [index: string]: string }) => {
     } else if (style === "position") {
       tailwindValue = styleValue;
     } else if (style === "z-index") {
-      console.log(styleValue);
       abbreviation = "z";
       tailwindValue =
         styleValue === "auto"

@@ -120,7 +120,7 @@ export const injectClass = (htmlText: string, attribute: object[]) => {
 };
 
 const removeExtraClasses = (htmlText: string) => {
-  const result: any[] = [];
+  const result: string[] = [];
   const splitText = htmlText.split("\n");
   splitText.forEach((line: string) => {
     const count = (line.match(/class/g) || []).length;
@@ -138,13 +138,13 @@ const consolidateClasses = (inputString: string) => {
   const classRegex = /class="([^"]*)"/g;
 
   // Extract all class attribute values
-  const matches: any[] | null = inputString.match(classRegex);
+  const matches: string[] | null = inputString.match(classRegex);
 
   // Consolidate class names
   let consolidatedClasses: string[] = [];
   if (!matches) return inputString;
   for (let i = 0; i < matches.length; i++) {
-    const classes = matches[i].match(/class="([^"]*)"/)[1].split(" ");
+    const classes = matches[i].match(/class="([^"]*)"/)![1].split(" ");
     consolidatedClasses = consolidatedClasses.concat(classes);
   }
   // Remove duplicate class names
