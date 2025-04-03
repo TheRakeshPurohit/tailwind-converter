@@ -1,54 +1,27 @@
-# React + TypeScript + Vite
+# Tailwind Converter
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The goal of this project is to take plain HTML/CSS and convert it to a
+single HTML file with [Tailwind](https://tailwindcss.com/) classes. Tracking supported
+Tailwind classes [here](SupportedClasses.md).
 
-Currently, two official plugins are available:
+**Note: This project is a work in progress. There may be bugs or incomplete features.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+It's also important to keep in mind that converting an existing project to use Tailwind CSS often involves more than just replacing classes. It may be best to restructure your HTML and/or adjust your design to fit the utility-first paradigm and match the available utility classes. Manual conversion would provide more control over the process and likely ensure a better end result.
 
-## Expanding the ESLint configuration
+## Run Locally
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Clone the repo, install the dependencies and run in a local environment:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+git clone https://github.com/kt474/tailwind-converter.git
+cd tailwind-converter
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## TODO
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+- Better test coverage - test entire app and prevent crashes from invalid text
+- Handle multiple css filter classes
+- Support active states (hover, focus)
+- Support css nesting instead of just top level css classes
