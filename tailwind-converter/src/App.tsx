@@ -15,7 +15,7 @@ import { cssToJson } from "./util/helper";
 import { injectClass } from "./util/helper";
 import { Header } from "./components/header";
 import { Copy } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 
@@ -23,25 +23,19 @@ function App() {
   const [htmlText, setHtmlText] = useState("");
   const [cssText, setCssText] = useState("");
   const [tailwindText, setTailwindText] = useState("");
-  const copyToClipboard = () => {
-    toast("Copied to clipboard!", {
-      duration: 2000
-    });
-    navigator.clipboard.writeText(tailwindText);
-  };
-
+  const firstSync = useRef(false);
   const maxHeight = {
     maxHeight: "calc(100% - 5.25rem)"
   };
-
-  useEffect(
-    () => setCssText(localStorage.css ? localStorage.css : initialCSS),
-    []
-  );
-  useEffect(
-    () => setHtmlText(localStorage.html ? localStorage.html : initialHTML),
-    []
-  );
+  const copyToClipboard = () => {
+    toast("Copied to clipboard!", {
+      duration: 2000,
+      style: {
+        width: "250px"
+      }
+    });
+    navigator.clipboard.writeText(tailwindText);
+  };
 
   const codepenOriginal = JSON.stringify({
     title: "Original HTML/CSS",
@@ -54,26 +48,59 @@ function App() {
     head: '<script src="https://cdn.tailwindcss.com"></script>'
   });
 
-  const convertToTailwind = () => {
-    setCssText(
-      css_beautify(cssText, { indent_size: 2, max_preserve_newlines: 0 })
-    );
-    const cssAttributes = cssToJson(cssText);
-    setTailwindText(
-      html_beautify(
-        injectClass(
-          htmlText.replace(/=(?:')([^']+)'/g, '="$1"'), // converts single quotes to double
-          cssAttributes
-        ),
-        {
-          indent_size: 2,
-          extra_liners: [],
-          wrap_line_length: 70,
-          max_preserve_newlines: 0
-        }
-      )
+  const getNewHtml = (html: string, css: string) => {
+    setCssText(css_beautify(css, { indent_size: 2, max_preserve_newlines: 0 }));
+    const cssAttributes = cssToJson(css);
+    return html_beautify(
+      injectClass(
+        html.replace(/=(?:')([^']+)'/g, '="$1"'), // converts single quotes to double
+        cssAttributes
+      ),
+      {
+        indent_size: 2,
+        extra_liners: [],
+        wrap_line_length: 70,
+        max_preserve_newlines: 0
+      }
     );
   };
+
+  const convertToTailwind = () => {
+    setTailwindText(getNewHtml(htmlText, cssText));
+    toast("Converted to Tailwind!", {
+      duration: 2000,
+      style: {
+        width: "250px"
+      }
+    });
+  };
+
+  useEffect(
+    () => setCssText(localStorage.css ? localStorage.css : initialCSS),
+    []
+  );
+  useEffect(
+    () => setHtmlText(localStorage.html ? localStorage.html : initialHTML),
+    []
+  );
+
+  useEffect(() => {
+    if (!firstSync.current && htmlText && cssText) {
+      setTailwindText(getNewHtml(htmlText, cssText));
+      firstSync.current = true;
+    }
+  }, [htmlText, cssText]);
+
+  useEffect(() => {
+    if (cssText) {
+      localStorage.setItem("css", cssText);
+    }
+  }, [cssText]);
+  useEffect(() => {
+    if (htmlText) {
+      localStorage.setItem("html", htmlText);
+    }
+  }, [htmlText]);
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">

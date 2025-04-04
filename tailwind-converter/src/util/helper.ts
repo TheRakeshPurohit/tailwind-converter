@@ -1,7 +1,6 @@
 import { convertAttributes } from "./converter";
 
-export const initialHTML = `<!-- Edit HTML here -->
-<html lang="en">
+export const initialHTML = `<html lang="en">
 <body>
   <div class="main">
     <h2>Welcome to Tailwind Converter!</h2>
@@ -12,7 +11,7 @@ export const initialHTML = `<!-- Edit HTML here -->
 </body>
 </html>`;
 
-export const initialCSS = `/* Edit CSS here */
+export const initialCSS = `
 body {
   margin: 1rem;
   padding: 1rem;
@@ -100,10 +99,6 @@ export const validValue = (value: string) => {
 };
 
 export const injectClass = (htmlText: string, attribute: object[]) => {
-  htmlText = htmlText.replace(
-    "<!-- Edit HTML here -->",
-    "<!-- HTML with Tailwind -->"
-  );
   attribute.forEach((obj) => {
     for (const [key, value] of Object.entries(obj)) {
       if (key.includes(".")) {

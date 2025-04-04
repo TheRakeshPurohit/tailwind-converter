@@ -1,6 +1,14 @@
-import { Moon, Sun, Settings } from "lucide-react";
+import { Moon, Sun, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -16,9 +24,43 @@ export function Header() {
           HTML/CSS to Tailwind Converter
         </h1>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="cursor-pointer">
-            <Settings />
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="cursor-pointer">
+                <Settings />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>About</DialogTitle>
+                <DialogDescription className="text-base text-gray-800 dark:text-gray-200">
+                  This web app takes plain HTML/CSS and converts it into a
+                  single HTML file with tailwind classes. Documentation
+                  regarding currently supported classes can be found&nbsp;
+                  <a
+                    href="https://github.com/kt474/tailwind-converter/blob/main/SupportedClasses.md"
+                    className="font-medium underline underline-offset-4"
+                    target="_blank"
+                  >
+                    here
+                  </a>
+                  .
+                </DialogDescription>
+                <DialogTitle className="mt-4">Note</DialogTitle>
+                <DialogDescription className="text-base font-bold text-gray-800 dark:text-gray-200">
+                  *This project is a work in progress. There may be bugs or
+                  incomplete features*
+                </DialogDescription>
+                <DialogDescription className="text-base text-gray-800 dark:text-gray-200">
+                  Keep in mind that converting an existing project to use
+                  Tailwind CSS often involves more than just replacing classes.
+                  It may be best to restructure your HTML and/or adjust your
+                  design to match the available utility classes.
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+
           <Button variant="ghost" size="icon" className="cursor-pointer">
             <a
               aria-label="github page"
