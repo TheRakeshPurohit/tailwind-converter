@@ -29,10 +29,7 @@ function App() {
   };
   const copyToClipboard = () => {
     toast("Copied to clipboard!", {
-      duration: 2000,
-      style: {
-        width: "250px"
-      }
+      duration: 2000
     });
     navigator.clipboard.writeText(tailwindText);
   };
@@ -68,10 +65,7 @@ function App() {
   const convertToTailwind = () => {
     setTailwindText(getNewHtml(htmlText, cssText));
     toast("Converted to Tailwind!", {
-      duration: 2000,
-      style: {
-        width: "250px"
-      }
+      duration: 2000
     });
   };
 
@@ -123,6 +117,7 @@ function App() {
                   >
                     <input type="hidden" name="data" value={codepenOriginal} />
                     <Button
+                      variant="outline"
                       type="submit"
                       title="codepen preview"
                       value=""
@@ -219,6 +214,7 @@ function App() {
                 >
                   <input type="hidden" name="data" value={codepenTailwind} />
                   <Button
+                    variant="outline"
                     type="submit"
                     title="codepen preview"
                     value=""
@@ -244,6 +240,7 @@ function App() {
                   </Button>
                 </form>
                 <Button
+                  variant="outline"
                   onClick={convertToTailwind}
                   className="mr-4 mt-3.5 cursor-pointer"
                 >
@@ -270,7 +267,16 @@ function App() {
             />
           </ResizablePanel>
         </ResizablePanelGroup>
-        <Toaster />
+        <Toaster
+          toastOptions={{
+            style: {
+              backgroundColor: "var(--toast-bg)",
+              color: "var(--toast-text)",
+              borderColor: "var(--toast-border)",
+              width: "250px"
+            }
+          }}
+        />
       </div>
     </ThemeProvider>
   );
