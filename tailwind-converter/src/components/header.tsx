@@ -1,4 +1,4 @@
-import { Moon, Sun, Settings, X } from "lucide-react";
+import { Moon, Sun, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -26,7 +26,11 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="cursor-pointer">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="cursor-pointer dark:hover:bg-gray-700"
+              >
                 <Settings />
               </Button>
             </DialogTrigger>
@@ -61,7 +65,11 @@ export function Header() {
             </DialogContent>
           </Dialog>
 
-          <Button variant="ghost" size="icon" className="cursor-pointer">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer dark:hover:bg-gray-700"
+          >
             <a
               aria-label="github page"
               href="https://github.com/kt474/tailwind-converter"
@@ -88,10 +96,10 @@ export function Header() {
             variant="ghost"
             size="icon"
             aria-label="Toggle theme"
-            className="cursor-pointer"
+            className="cursor-pointer dark:hover:bg-gray-700"
           >
-            <Sun className="w-5 h-5 transition-all scale-100 rotate-0 dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute w-5 h-5 transition-all scale-0 rotate-90 dark:rotate-0 dark:scale-100" />
+            <Sun className="w-5 h-5 scale-100 rotate-0 dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute w-5 h-5 scale-0 rotate-90 dark:rotate-0 dark:scale-100" />
           </Button>
         </div>
       </div>

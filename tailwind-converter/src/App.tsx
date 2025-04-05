@@ -115,7 +115,7 @@ function App() {
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel className="min-h-40">
                 <div className="flex justify-between">
-                  <h2 className="p-4 text-lg font-medium ">HTML Input</h2>
+                  <h2 className="p-4 text-lg font-medium ">HTML</h2>
                   <form
                     action="https://codepen.io/pen/define"
                     method="POST"
@@ -172,7 +172,7 @@ function App() {
               </ResizablePanel>
               <ResizableHandle />
               <ResizablePanel className="min-h-40">
-                <h2 className="p-4 text-lg font-medium">CSS Input</h2>
+                <h2 className="p-4 text-lg font-medium">CSS</h2>
                 <CodeMirror
                   aria-label="css input"
                   className="relative h-full text-sm dark:hidden"
@@ -201,12 +201,12 @@ function App() {
           <ResizablePanel className="h-screen min-w-80">
             <div className="flex justify-between">
               <div className="flex">
-                <h2 className="p-4 text-lg font-medium">Tailwind Output</h2>
+                <h2 className="p-4 text-lg font-medium">Tailwind</h2>
                 <Button
                   onClick={() => copyToClipboard()}
                   variant="ghost"
                   size="icon"
-                  className="mt-3 -ml-3 cursor-pointer"
+                  className="mt-3 -ml-3 cursor-pointer dark:hover:bg-gray-700"
                 >
                   <Copy />
                 </Button>
