@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 
 export function Header() {
@@ -27,6 +27,7 @@ export function Header() {
           <Dialog>
             <DialogTrigger asChild>
               <Button
+                aria-label="settings modal"
                 variant="ghost"
                 size="icon"
                 className="cursor-pointer dark:hover:bg-gray-700"
@@ -68,6 +69,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="github repository"
             className="cursor-pointer dark:hover:bg-gray-700"
           >
             <a

@@ -1,7 +1,7 @@
 import {
   ResizableHandle,
   ResizablePanel,
-  ResizablePanelGroup
+  ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,11 @@ function App() {
   const [tailwindText, setTailwindText] = useState("");
   const firstSync = useRef(false);
   const maxHeight = {
-    maxHeight: "calc(100% - 5.25rem)"
+    maxHeight: "calc(100% - 5.25rem)",
   };
   const copyToClipboard = () => {
     toast("Copied to clipboard!", {
-      duration: 2000
+      duration: 2000,
     });
     navigator.clipboard.writeText(tailwindText);
   };
@@ -42,12 +42,12 @@ function App() {
   const codepenOriginal = JSON.stringify({
     title: "Original HTML/CSS",
     html: htmlText,
-    css: cssText
+    css: cssText,
   });
   const codepenTailwind = JSON.stringify({
     title: "Tailwind version",
     html: tailwindText,
-    head: '<script src="https://cdn.tailwindcss.com"></script>'
+    head: '<script src="https://cdn.tailwindcss.com"></script>',
   });
 
   const getNewHtml = (html: string, css: string) => {
@@ -62,7 +62,7 @@ function App() {
         indent_size: 2,
         extra_liners: [],
         wrap_line_length: 70,
-        max_preserve_newlines: 0
+        max_preserve_newlines: 0,
       }
     );
   };
@@ -70,7 +70,7 @@ function App() {
   const convertToTailwind = () => {
     setTailwindText(getNewHtml(htmlText, cssText));
     toast("Converted to Tailwind!", {
-      duration: 2000
+      duration: 2000,
     });
   };
 
@@ -109,15 +109,20 @@ function App() {
           direction="horizontal"
           className="h-40 border"
           style={maxHeight}
+          aria-label="html/css code mirror panels"
         >
           <ResizablePanel className="min-w-60">
-            <ResizablePanelGroup direction="vertical">
+            <ResizablePanelGroup
+              direction="vertical"
+              aria-label="tailwind code mirror panels"
+            >
               <div className="flex justify-between">
                 <h2 className="p-4 text-lg font-medium">HTML</h2>
                 <div className="flex">
                   <Button
                     onClick={() => reset()}
                     variant="outline"
+                    aria-label="reset html and css"
                     size="icon"
                     className="mr-4 mt-3.5 cursor-pointer px-5"
                   >
@@ -159,7 +164,7 @@ function App() {
               </div>
               <ResizablePanel className="min-h-40">
                 <CodeMirror
-                  aria-label="html input"
+                  aria-label="html input light mode"
                   className="relative h-full text-sm dark:hidden"
                   value={htmlText}
                   height="100%"
@@ -169,7 +174,7 @@ function App() {
                   }}
                 />
                 <CodeMirror
-                  aria-label="html input"
+                  aria-label="html input dark mode"
                   className="h-full text-sm"
                   theme={oneDark}
                   value={htmlText}
@@ -184,7 +189,7 @@ function App() {
               <h2 className="p-4 text-lg font-medium">CSS</h2>
               <ResizablePanel className="min-h-40">
                 <CodeMirror
-                  aria-label="css input"
+                  aria-label="css input light mode"
                   className="relative h-full text-sm dark:hidden"
                   value={cssText}
                   height="100%"
@@ -194,7 +199,7 @@ function App() {
                   }}
                 />
                 <CodeMirror
-                  aria-label="css input"
+                  aria-label="css input dark mode"
                   className="h-full text-sm"
                   theme={oneDark}
                   value={cssText}
@@ -207,7 +212,7 @@ function App() {
               </ResizablePanel>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <ResizableHandle className="" />
+          <ResizableHandle aria-label="vertical resize panel" />
           <ResizablePanel className="h-screen min-w-80">
             <div className="flex justify-between">
               <div className="flex">
@@ -216,6 +221,7 @@ function App() {
                   onClick={() => copyToClipboard()}
                   variant="ghost"
                   size="icon"
+                  aria-label="copy tailwind output"
                   className="mt-3 -ml-3 cursor-pointer dark:hover:bg-gray-700"
                 >
                   <Copy />
@@ -264,7 +270,7 @@ function App() {
               </div>
             </div>
             <CodeMirror
-              aria-label="tailwind html"
+              aria-label="tailwind html light mode"
               className="relative h-full text-sm dark:hidden"
               value={tailwindText}
               readOnly={true}
@@ -272,7 +278,7 @@ function App() {
               extensions={[html()]}
             />
             <CodeMirror
-              aria-label="tailwind html"
+              aria-label="tailwind html dark mode"
               className="h-full text-sm"
               theme={oneDark}
               value={tailwindText}
@@ -288,8 +294,8 @@ function App() {
               backgroundColor: "var(--toast-bg)",
               color: "var(--toast-text)",
               borderColor: "var(--toast-border)",
-              width: "250px"
-            }
+              width: "250px",
+            },
           }}
         />
       </div>
