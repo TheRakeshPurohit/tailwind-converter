@@ -60,7 +60,6 @@ function App() {
   });
 
   const getNewHtml = (html: string, css: string) => {
-    setCssText(css_beautify(css, { indent_size: 2, max_preserve_newlines: 0 }));
     const cssAttributes = cssToJson(css);
     return html_beautify(
       injectClass(
@@ -77,10 +76,19 @@ function App() {
   };
 
   const convertToTailwind = () => {
-    setTailwindText(getNewHtml(htmlText, cssText));
-    toast("Converted to Tailwind!", {
-      duration: 2000,
-    });
+    try {
+      setCssText(
+        css_beautify(cssText, { indent_size: 2, max_preserve_newlines: 0 })
+      );
+      setTailwindText(getNewHtml(htmlText, cssText));
+      toast("Converted to Tailwind!", {
+        duration: 2000,
+      });
+    } catch (error) {
+      toast(`Error converting to tailwind: ${error}`, {
+        duration: 2000,
+      });
+    }
   };
 
   useEffect(
