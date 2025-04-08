@@ -23,7 +23,16 @@ function App() {
   const [htmlText, setHtmlText] = useState("");
   const [cssText, setCssText] = useState("");
   const [tailwindText, setTailwindText] = useState("");
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem("vite-ui-theme");
+    return savedTheme ? savedTheme : "dark";
+  });
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme === "dark" ? "light" : "dark");
+  };
   const firstSync = useRef(false);
+
   const maxHeight = {
     maxHeight: "calc(100% - 5.25rem)",
   };
@@ -104,7 +113,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <div className="h-screen">
-        <Header />
+        <Header onThemeChange={handleThemeChange} />
         <ResizablePanelGroup
           direction="horizontal"
           className="h-40 border"
@@ -114,7 +123,7 @@ function App() {
           <ResizablePanel className="min-w-60">
             <ResizablePanelGroup
               direction="vertical"
-              aria-label="tailwind code mirror panels"
+              aria-label="tailwind code mirror p anels"
             >
               <div className="flex justify-between">
                 <h2 className="p-4 text-lg font-medium">HTML</h2>
@@ -164,19 +173,9 @@ function App() {
               </div>
               <ResizablePanel className="min-h-40">
                 <CodeMirror
-                  aria-label="html input light mode"
-                  className="relative h-full text-sm dark:hidden"
-                  value={htmlText}
-                  height="100%"
-                  extensions={[html()]}
-                  onChange={(value) => {
-                    setHtmlText(value);
-                  }}
-                />
-                <CodeMirror
-                  aria-label="html input dark mode"
+                  aria-label="html input"
                   className="h-full text-sm"
-                  theme={oneDark}
+                  theme={theme === "dark" ? oneDark : "light"}
                   value={htmlText}
                   height="100%"
                   extensions={[html()]}
@@ -189,19 +188,9 @@ function App() {
               <h2 className="p-4 text-lg font-medium">CSS</h2>
               <ResizablePanel className="min-h-40">
                 <CodeMirror
-                  aria-label="css input light mode"
-                  className="relative h-full text-sm dark:hidden"
-                  value={cssText}
-                  height="100%"
-                  extensions={[css()]}
-                  onChange={(value) => {
-                    setCssText(value);
-                  }}
-                />
-                <CodeMirror
-                  aria-label="css input dark mode"
+                  aria-label="css input"
                   className="h-full text-sm"
-                  theme={oneDark}
+                  theme={theme === "dark" ? oneDark : "light"}
                   value={cssText}
                   height="100%"
                   extensions={[css()]}
@@ -270,17 +259,9 @@ function App() {
               </div>
             </div>
             <CodeMirror
-              aria-label="tailwind html light mode"
-              className="relative h-full text-sm dark:hidden"
-              value={tailwindText}
-              readOnly={true}
-              height="100%"
-              extensions={[html()]}
-            />
-            <CodeMirror
-              aria-label="tailwind html dark mode"
+              aria-label="tailwind html"
               className="h-full text-sm"
-              theme={oneDark}
+              theme={theme === "dark" ? oneDark : "light"}
               value={tailwindText}
               readOnly={true}
               height="100%"

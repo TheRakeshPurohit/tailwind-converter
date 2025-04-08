@@ -10,11 +10,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function Header() {
+interface HeaderProps {
+  onThemeChange: (theme: string) => void;
+}
+
+export function Header({ onThemeChange }: HeaderProps) {
   const { theme, setTheme } = useTheme();
 
   const toggle = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    const savedTheme = localStorage.getItem("vite-ui-theme");
+    if (savedTheme) {
+      setTheme(theme === "dark" ? "light" : "dark");
+    } else {
+      setTheme("light");
+    }
+    onThemeChange(theme);
   };
 
   return (
@@ -38,7 +48,7 @@ export function Header() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>About</DialogTitle>
-                <DialogDescription className="text-base text-gray-800 dark:text-gray-200">
+                <DialogDescription className="text-base text-gray-800 dark:text-gray-300">
                   This web app takes plain HTML/CSS and converts it into a
                   single HTML file with tailwind classes. Documentation
                   regarding currently supported classes can be found&nbsp;
@@ -52,11 +62,11 @@ export function Header() {
                   .
                 </DialogDescription>
                 <DialogTitle className="mt-4">Note</DialogTitle>
-                <DialogDescription className="text-base font-bold text-gray-800 dark:text-gray-200">
+                <DialogDescription className="text-base font-bold text-gray-800 dark:text-gray-300">
                   *This project is a work in progress. There may be bugs or
                   incomplete features*
                 </DialogDescription>
-                <DialogDescription className="text-base text-gray-800 dark:text-gray-200">
+                <DialogDescription className="text-base text-gray-800 dark:text-gray-300">
                   Keep in mind that converting an existing project to use
                   Tailwind CSS often involves more than just replacing classes.
                   It may be best to restructure your HTML and/or adjust your
