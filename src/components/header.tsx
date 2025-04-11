@@ -46,7 +46,7 @@ export function Header({ onThemeChange }: HeaderProps) {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
+              <DialogHeader className="text-left">
                 <DialogTitle>About</DialogTitle>
                 <DialogDescription className="text-base text-gray-800 dark:text-gray-300">
                   This web app takes plain HTML/CSS and converts it into a

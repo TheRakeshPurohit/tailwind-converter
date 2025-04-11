@@ -128,7 +128,7 @@ function App() {
           style={maxHeight}
           aria-label="html/css code mirror panels"
         >
-          <ResizablePanel className="min-w-60">
+          <ResizablePanel className="min-w-10 sm:min-w-60">
             <ResizablePanelGroup
               direction="vertical"
               aria-label="tailwind code mirror panels"
@@ -179,10 +179,10 @@ function App() {
                   </form>
                 </div>
               </div>
-              <ResizablePanel className="min-h-40">
+              <ResizablePanel className="min-w-10 sm:min-h-40">
                 <CodeMirror
                   aria-label="html input"
-                  className="h-full text-sm"
+                  className="h-full text-[15px]"
                   theme={theme === "dark" ? oneDark : "light"}
                   value={htmlText}
                   height="100%"
@@ -197,7 +197,7 @@ function App() {
               <ResizablePanel className="min-h-40">
                 <CodeMirror
                   aria-label="css input"
-                  className="h-full text-sm"
+                  className="h-full text-[15px]"
                   theme={theme === "dark" ? oneDark : "light"}
                   value={cssText}
                   height="100%"
@@ -210,7 +210,7 @@ function App() {
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle aria-label="vertical resize panel" />
-          <ResizablePanel className="min-w-80">
+          <ResizablePanel className="min-w-10 sm:min-w-80">
             <div className="flex flex-col h-full">
               <div className="flex justify-between bg-background">
                 <div className="flex">
@@ -270,7 +270,7 @@ function App() {
               <div className="flex-1 overflow-hidden">
                 <CodeMirror
                   aria-label="tailwind html"
-                  className="h-full text-sm overflow-auto"
+                  className="h-full text-[15px] overflow-auto"
                   theme={theme === "dark" ? oneDark : "light"}
                   value={tailwindText}
                   readOnly={true}
