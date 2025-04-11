@@ -6,7 +6,7 @@ Tailwind classes [here](SupportedClasses.md).
 
 **Note: This project is a work in progress. There may be bugs or incomplete features.**
 
-It's also important to keep in mind that converting an existing project to use Tailwind CSS often involves more than just replacing classes. It may be best to restructure your HTML and/or adjust your design to fit the utility-first paradigm and match the available utility classes. Manual conversion would provide more control over the process and likely ensure a better end result.
+Keep in mind that converting an existing project to use Tailwind CSS often involves more than just replacing classes. It may be best to restructure your HTML and/or adjust your design to match the available utility classes. Manual conversion would provide more control over the process and likely ensure a better end result.
 
 ## Run Locally
 
@@ -20,8 +20,9 @@ npm run dev
 ```
 
 ## TODO
-
-- Better test coverage - test entire app and prevent crashes from invalid text
-- Handle multiple css filter classes
-- Support active states (hover, focus)
-- Support css nesting instead of just top level css classes
+- [ ] Refactor conversion code and go over all tailwind classes again. Support as many as possible
+- [ ] Support Tailwind V4
+- [ ] Use Vitest to add testing module
+- [ ] Add option to use exact dimensions
+- [ ] Show user which css properties were not converted
+- [ ] Support active states, css nesting, and media queries 
