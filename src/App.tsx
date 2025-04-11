@@ -210,71 +210,75 @@ function App() {
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle aria-label="vertical resize panel" />
-          <ResizablePanel className="min-w-80 flex flex-col">
-            <div className="flex justify-between sticky top-0 z-10 bg-background">
-              <div className="flex">
-                <h2 className="p-4 text-lg font-medium">Tailwind</h2>
-                <Button
-                  onClick={() => copyToClipboard()}
-                  variant="ghost"
-                  size="icon"
-                  aria-label="copy tailwind output"
-                  className="mt-3 -ml-3 cursor-pointer dark:hover:bg-gray-700"
-                >
-                  <Copy />
-                </Button>
-              </div>
-              <div className="flex">
-                <form
-                  action="https://codepen.io/pen/define"
-                  method="POST"
-                  target="_blank"
-                >
-                  <input type="hidden" name="data" value={codepenTailwind} />
+          <ResizablePanel className="min-w-80">
+            <div className="flex flex-col h-full">
+              <div className="flex justify-between bg-background">
+                <div className="flex">
+                  <h2 className="p-4 text-lg font-medium">Tailwind</h2>
+                  <Button
+                    onClick={() => copyToClipboard()}
+                    variant="ghost"
+                    size="icon"
+                    aria-label="copy tailwind output"
+                    className="mt-3 -ml-3 cursor-pointer dark:hover:bg-gray-700"
+                  >
+                    <Copy />
+                  </Button>
+                </div>
+                <div className="flex">
+                  <form
+                    action="https://codepen.io/pen/define"
+                    method="POST"
+                    target="_blank"
+                  >
+                    <input type="hidden" name="data" value={codepenTailwind} />
+                    <Button
+                      variant="outline"
+                      type="submit"
+                      title="codepen preview"
+                      value=""
+                      className="mr-4 mt-3.5 cursor-pointer"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
+                        <line x1="12" x2="12" y1="22" y2="15.5" />
+                        <polyline points="22 8.5 12 15.5 2 8.5" />
+                        <polyline points="2 15.5 12 8.5 22 15.5" />
+                        <line x1="12" x2="12" y1="2" y2="8.5" />
+                      </svg>
+                    </Button>
+                  </form>
                   <Button
                     variant="outline"
-                    type="submit"
-                    title="codepen preview"
-                    value=""
+                    onClick={convertToTailwind}
                     className="mr-4 mt-3.5 cursor-pointer"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
-                      <line x1="12" x2="12" y1="22" y2="15.5" />
-                      <polyline points="22 8.5 12 15.5 2 8.5" />
-                      <polyline points="2 15.5 12 8.5 22 15.5" />
-                      <line x1="12" x2="12" y1="2" y2="8.5" />
-                    </svg>
+                    Convert
                   </Button>
-                </form>
-                <Button
-                  variant="outline"
-                  onClick={convertToTailwind}
-                  className="mr-4 mt-3.5 cursor-pointer"
-                >
-                  Convert
-                </Button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <CodeMirror
+                  aria-label="tailwind html"
+                  className="h-full text-sm overflow-auto"
+                  theme={theme === "dark" ? oneDark : "light"}
+                  value={tailwindText}
+                  readOnly={true}
+                  height="100%"
+                  extensions={[html()]}
+                />
               </div>
             </div>
-            <CodeMirror
-              aria-label="tailwind html"
-              className="h-full text-sm flex-1"
-              theme={theme === "dark" ? oneDark : "light"}
-              value={tailwindText}
-              readOnly={true}
-              height="100%"
-              extensions={[html()]}
-            />
           </ResizablePanel>
         </ResizablePanelGroup>
         <Toaster
