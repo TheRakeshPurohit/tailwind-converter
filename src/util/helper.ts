@@ -1,4 +1,5 @@
 import { convertAttributes } from "./converter";
+import DOMPurify from "dompurify";
 
 export const initialHTML = `<html lang="en">
 <body>
@@ -97,62 +98,43 @@ export const validValue = (value: string) => {
   return value.includes("px") || value.includes("rem") ? true : false;
 };
 
-export const injectClass = (htmlText: string, attribute: object[]) => {
-  attribute.forEach((obj) => {
-    for (const [key, value] of Object.entries(obj)) {
-      if (key.includes(".")) {
-        const regex = new RegExp("\\b" + key.slice(1) + "\\b", "g");
-        htmlText = htmlText.replaceAll(regex, value);
-      } else {
-        const keyString = `<${key}`;
-        const replaceString = `${keyString} class="${value}"`;
-        htmlText = htmlText.replaceAll(keyString, replaceString);
+interface ClassObject {
+  [selector: string]: string;
+}
+
+export const parser = (html: string, classObjects: ClassObject[]) => {
+  const sanitizedHtml = DOMPurify.sanitize(html);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(sanitizedHtml, "text/html");
+
+  for (const classObject of classObjects) {
+    for (const selector in classObject) {
+      if (Object.hasOwn(classObject, selector)) {
+        const tailwindClasses: string = classObject[selector];
+        if (tailwindClasses !== "") {
+          // does not handle media selectors
+          const elements = doc.querySelectorAll(selector);
+
+          if (elements) {
+            elements.forEach((element) => {
+              if (selector.startsWith(".")) {
+                // Class-based selector: Replace specific class names
+                const originalClasses = element.className.split(" ");
+                const newClasses = originalClasses.map((cls) =>
+                  cls === selector.substring(1) ? tailwindClasses : cls
+                );
+                element.className = newClasses.join(" ");
+              } else {
+                // Tag-based selector (e.g., "body", "h2"): Add classes
+                element.className +=
+                  (element.className ? " " : "") + tailwindClasses;
+              }
+            });
+          }
+        }
       }
     }
-  });
-  return removeExtraClasses(htmlText);
-};
-
-const removeExtraClasses = (htmlText: string) => {
-  const result: string[] = [];
-  const splitText = htmlText.split("\n");
-  splitText.forEach((line: string) => {
-    const count = (line.match(/class/g) || []).length;
-    if (count === 2) {
-      result.push(consolidateClasses(line));
-    } else {
-      result.push(line);
-    }
-  });
-  return result.join("\n");
-};
-
-const consolidateClasses = (inputString: string) => {
-  // Regular expression to find all class attributes and their values
-  const classRegex = /class="([^"]*)"/g;
-
-  // Extract all class attribute values
-  const matches: string[] | null = inputString.match(classRegex);
-
-  // Consolidate class names
-  let consolidatedClasses: string[] = [];
-  if (!matches) return inputString;
-  for (let i = 0; i < matches.length; i++) {
-    const classes = matches[i].match(/class="([^"]*)"/)![1].split(" ");
-    consolidatedClasses = consolidatedClasses.concat(classes);
   }
-  // Remove duplicate class names
-  consolidatedClasses = Array.from(new Set(consolidatedClasses));
 
-  // Build the new class attribute
-  const newClassAttribute = 'class="' + consolidatedClasses.join(" ") + '"';
-
-  // Replace existing class attributes with the new one
-  const outputString = inputString.replace(classRegex, "");
-  const classCarrot = outputString.indexOf(">");
-  const result =
-    outputString.slice(0, classCarrot - 1) +
-    newClassAttribute +
-    outputString.slice(classCarrot);
-  return result;
+  return doc.documentElement.outerHTML;
 };

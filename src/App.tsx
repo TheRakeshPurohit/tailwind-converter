@@ -12,12 +12,12 @@ import { css } from "@codemirror/lang-css";
 import { css_beautify, html_beautify } from "js-beautify";
 import { initialHTML, initialCSS } from "./util/helper";
 import { cssToJson } from "./util/helper";
-import { injectClass } from "./util/helper";
 import { Header } from "./components/header";
 import { Copy, Undo } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
+import { parser } from "./util/helper";
 
 function App() {
   const [htmlText, setHtmlText] = useState("");
@@ -62,7 +62,7 @@ function App() {
   const getNewHtml = (html: string, css: string) => {
     const cssAttributes = cssToJson(css);
     return html_beautify(
-      injectClass(
+      parser(
         html.replace(/=(?:')([^']+)'/g, '="$1"'), // converts single quotes to double
         cssAttributes
       ),
@@ -86,7 +86,7 @@ function App() {
       });
     } catch (error) {
       toast(`Error converting to tailwind: ${error}`, {
-        duration: 2000,
+        duration: 4000,
       });
     }
   };
@@ -131,7 +131,7 @@ function App() {
           <ResizablePanel className="min-w-60">
             <ResizablePanelGroup
               direction="vertical"
-              aria-label="tailwind code mirror p anels"
+              aria-label="tailwind code mirror panels"
             >
               <div className="flex justify-between">
                 <h2 className="p-4 text-lg font-medium">HTML</h2>
@@ -210,8 +210,8 @@ function App() {
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle aria-label="vertical resize panel" />
-          <ResizablePanel className="h-screen min-w-80">
-            <div className="flex justify-between">
+          <ResizablePanel className="min-w-80 flex flex-col">
+            <div className="flex justify-between sticky top-0 z-10 bg-background">
               <div className="flex">
                 <h2 className="p-4 text-lg font-medium">Tailwind</h2>
                 <Button
@@ -268,7 +268,7 @@ function App() {
             </div>
             <CodeMirror
               aria-label="tailwind html"
-              className="h-full text-sm"
+              className="h-full text-sm flex-1"
               theme={theme === "dark" ? oneDark : "light"}
               value={tailwindText}
               readOnly={true}
