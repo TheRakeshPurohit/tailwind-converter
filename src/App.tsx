@@ -190,7 +190,7 @@ function App() {
                   </Button>
                 </div>
               </div>
-              <ResizablePanel className="min-w-10 sm:min-h-40">
+              <ResizablePanel className="min-w-10 min-h-40">
                 <CodeMirror
                   aria-label="html input"
                   className="h-full text-[15px]"
