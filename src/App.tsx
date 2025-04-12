@@ -18,6 +18,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { parser } from "./util/helper";
+import { track } from "@vercel/analytics";
 
 function App() {
   const [htmlText, setHtmlText] = useState("");
@@ -81,10 +82,14 @@ function App() {
         css_beautify(cssText, { indent_size: 2, max_preserve_newlines: 0 })
       );
       setTailwindText(getNewHtml(htmlText, cssText));
+      track("Convert success");
       toast("Converted to Tailwind!", {
         duration: 2000,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        track("Convert error", { error: error.message });
+      } else track("Convert error failure");
       toast(`Error converting to tailwind: ${error}`, {
         duration: 4000,
       });
