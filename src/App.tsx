@@ -146,7 +146,7 @@ function App() {
                     variant="outline"
                     aria-label="reset html and css"
                     size="icon"
-                    className="mr-4 mt-3.5 cursor-pointer px-5"
+                    className="mr-2.5 mt-3.5 cursor-pointer px-5"
                   >
                     <Undo />
                   </Button>
@@ -161,7 +161,7 @@ function App() {
                       type="submit"
                       title="codepen preview"
                       value=""
-                      className="mr-4 mt-3.5 cursor-pointer"
+                      className="mr-2.5 mt-3.5 cursor-pointer"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -182,6 +182,12 @@ function App() {
                       </svg>
                     </Button>
                   </form>
+                  <Button
+                    onClick={convertToTailwind}
+                    className="mr-4 mt-3.5 cursor-pointer"
+                  >
+                    Convert
+                  </Button>
                 </div>
               </div>
               <ResizablePanel className="min-w-10 sm:min-h-40">
@@ -263,13 +269,6 @@ function App() {
                       </svg>
                     </Button>
                   </form>
-                  <Button
-                    variant="outline"
-                    onClick={convertToTailwind}
-                    className="mr-4 mt-3.5 cursor-pointer"
-                  >
-                    Convert
-                  </Button>
                 </div>
               </div>
               <div className="flex-1 overflow-hidden">
