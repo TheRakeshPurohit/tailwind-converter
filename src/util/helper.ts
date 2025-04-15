@@ -37,7 +37,6 @@ type CSSJson = {
 
 export const cssToJson = (css: string): { [index: string]: string }[] => {
   const json: CSSJson = {};
-
   // Remove comments and normalize whitespace
   css = css
     .replace(/\/\*[\s\S]*?\*\//g, "") // Remove CSS comments
@@ -111,8 +110,9 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
     for (const selector in classObject) {
       if (Object.hasOwn(classObject, selector)) {
         const tailwindClasses: string = classObject[selector];
-        if (tailwindClasses !== "") {
-          // does not handle media selectors
+        // temporary fix because media queries aren't supported yet
+        // need to refactor the css parsing first
+        if (tailwindClasses !== "" && !/[@{}]/.test(selector)) {
           const elements = doc.querySelectorAll(selector);
 
           if (elements) {
