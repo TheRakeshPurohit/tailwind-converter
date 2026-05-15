@@ -116,6 +116,9 @@ const exactClassFor = (property: string, value: string) => {
   if (colorPrefixes[property]) {
     return `${colorPrefixes[property]}-[${arbitraryValue(value)}]`;
   }
+  if (property === "background-image") {
+    return `bg-[${arbitraryValue(value)}]`;
+  }
   if (property === "opacity") return `opacity-[${arbitraryValue(value)}]`;
   if (property === "z-index") return `z-[${arbitraryValue(value)}]`;
   if (property === "transition-duration") {

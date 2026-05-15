@@ -128,7 +128,6 @@ const tailwindGapProperties = new Set([
 
 const unsupportedProperties = new Set([
   "animation",
-  "background-image",
   "border-spacing",
 ]);
 
@@ -204,7 +203,7 @@ const getUnsupportedMessage = ({
     normalizedProperty === "background-image" ||
     normalizedValue.includes("gradient(")
   ) {
-    return "Background images and gradients are preserved. URL and gradient parsing is not implemented yet.";
+    return "Background images and gradients are preserved in token mode. Use Exact mode to emit an arbitrary background image utility.";
   }
 
   if (normalizedProperty === "animation") {

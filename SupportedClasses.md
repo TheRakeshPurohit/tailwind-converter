@@ -110,7 +110,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - **Spacing:** margin, padding, gap, scroll margin, scroll padding
 - **Sizing:** width, height, min/max width, min/max height
 - **Typography:** font family, font size, font style, font weight, line height, letter spacing, text align, text color, text decoration, text transform, text overflow, text indent, vertical align, whitespace, word break, list style
-- **Backgrounds:** background color, attachment, clip, origin, position, repeat, size
+- **Backgrounds:** background color, attachment, clip, origin, position, repeat, size, exact-mode background image
 - **Borders and outlines:** border width, border color, border style, border radius, outline width, outline color, outline style, outline offset
 - **Effects:** opacity, box shadow, mix blend mode, background blend mode
 - **Filters:** blur, brightness, contrast, grayscale, hue rotate, invert, saturate, sepia, and backdrop equivalents
@@ -126,7 +126,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - Space-between utilities from sibling relationships
 - Divide and ring utilities
 - Drop shadow
-- Background images and gradients
+- Background images and gradients in token mode
 - Animation
 - Border spacing
 - Screen reader utilities
@@ -147,7 +147,8 @@ Some Tailwind utility families are not generated because their underlying CSS is
 | `space-x-*`, `space-y-*` | Child/sibling margin selectors | Not converted |
 | `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Supports `none`, `subgrid`, and `repeat(1..12, minmax(0, 1fr))`. Exact mode uses arbitrary values. |
 | `col-span-*`, `row-span-*`, `col-start-*`, `row-start-*` | `grid-column`, `grid-row` | Mostly not converted |
-| Gradient utilities such as `from-*`, `via-*`, `to-*` | `background-image`, gradient stops | Not converted |
+| Arbitrary `bg` background image utilities | `background-image` | Exact mode only. Tokens mode preserves background images and gradients for review. |
+| Gradient utilities such as `from-*`, `via-*`, `to-*` | Gradient stops | Not converted |
 | `animate-*` | `animation`, `@keyframes` | Not converted |
 | `transition-*`, `ease-*` | `transition-property`, `transition-duration`, `transition-delay`, `transition-timing-function` | Supports common Tailwind transition families and conservative one-item `transition` shorthands. Exact mode uses arbitrary values. |
 | `container` and container query utilities | Container sizing/query behavior | Not converted |

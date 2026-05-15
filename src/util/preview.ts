@@ -251,7 +251,10 @@ const declarationsForUtility = (utility: string) => {
       shadow: "box-shadow",
       "grid-cols": "grid-template-columns",
       "grid-rows": "grid-template-rows",
-      bg: "background-color",
+      bg:
+        cssValue.startsWith("url(") || cssValue.includes("gradient(")
+          ? "background-image"
+          : "background-color",
       border: "border-color",
     };
     const property = arbitraryProperties[prefix];

@@ -74,7 +74,7 @@ Common limitations include:
 - drop shadows
 - ring, divide, and space utilities
 - complex grid placement and advanced grid templates
-- background images and gradients
+- background images and gradients in Tokens mode
 - animation and keyframes
 - CSS variables as Tailwind theme tokens
 - container queries
@@ -107,5 +107,5 @@ Useful next milestones:
 
 - Improve scriptless converted preview rendering.
 - Add more unsupported-property classification.
-- Expand support for grid placement, advanced grid templates, background images, and drop shadows.
+- Expand support for grid placement, advanced grid templates, gradient stop utilities, and drop shadows.
 - Add relationship-aware conversions for `space-*` and `divide-*`.

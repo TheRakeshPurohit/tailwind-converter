@@ -502,6 +502,57 @@ test("preserves compound background shorthand", () => {
   ]);
 });
 
+test("preserves background images in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background-image: url("/hero.png"); padding: 1rem; }`
+  );
+
+  expect(result.html).toContain('class="hero p-4"');
+  expect(result.leftoverCss).toContain('background-image: url("/hero.png");');
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".hero",
+      property: "background-image",
+      value: 'url("/hero.png")',
+      category: "unsupported-property",
+      message:
+        "Background images and gradients are preserved in token mode. Use Exact mode to emit an arbitrary background image utility.",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary background image urls", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background-image: url(#hero); }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="bg-[url(#hero)]"');
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual([
+    expect.objectContaining({
+      selector: ".hero",
+      property: "background-image",
+      className: "bg-[url(#hero)]",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary background gradients", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background-image: linear-gradient(to right, red, blue); }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="bg-[linear-gradient(to_right\\,_red\\,_blue)]"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
 test("expands font shorthand into typography classes", () => {
   const result = convertHtmlCss(
     `<html><body><p class="lead">Lead</p></body></html>`,
@@ -744,4 +795,17 @@ test("generates scriptless preview css for transition utilities", () => {
     ".transition-\\[width\\]{transition-property: width;}"
   );
   expect(result).toContain(".ease-\\[ease\\]{transition-timing-function: ease;}");
+});
+
+test("generates scriptless preview css for arbitrary background images", () => {
+  const result = generatePreviewCss(
+    `<section class="bg-[url(#hero)] bg-[linear-gradient(to_right\\,_red\\,_blue)]"></section>`
+  );
+
+  expect(result).toContain(
+    ".bg-\\[url\\(\\#hero\\)\\]{background-image: url(#hero);}"
+  );
+  expect(result).toContain(
+    ".bg-\\[linear-gradient\\(to_right\\\\\\,_red\\\\\\,_blue\\)\\]{background-image: linear-gradient(to right, red, blue);}"
+  );
 });
