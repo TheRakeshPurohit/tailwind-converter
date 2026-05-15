@@ -25,6 +25,7 @@ import {
   Undo,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { track } from "@vercel/analytics";
@@ -45,6 +46,39 @@ type ReviewStatus =
   | "warnings";
 type PreviewViewport = "desktop" | "tablet" | "mobile";
 type PreviewMode = "split" | "original" | "converted";
+
+const preservedWarningCategories = new Set([
+  "relationship-based",
+  "pseudo-element",
+  "media-query",
+]);
+
+const reviewBadgeClasses: Record<Exclude<ReviewStatus, "all">, string> = {
+  converted:
+    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  approximated:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  unsupported:
+    "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+  preserved:
+    "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  warnings:
+    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+};
+
+const ReviewBadge = ({
+  status,
+  children,
+}: {
+  status: Exclude<ReviewStatus, "all">;
+  children: ReactNode;
+}) => (
+  <span
+    className={`rounded border px-1.5 py-0.5 text-xs font-medium ${reviewBadgeClasses[status]}`}
+  >
+    {children}
+  </span>
+);
 
 function App() {
   const [htmlText, setHtmlText] = useState("");
@@ -96,11 +130,6 @@ function App() {
     setCssText(initialCSS);
   };
 
-  const preservedWarningCategories = new Set([
-    "relationship-based",
-    "pseudo-element",
-    "media-query",
-  ]);
   const reviewCount = conversionResult
     ? conversionResult.unsupported.length +
       conversionResult.preservedRules.length +
@@ -179,6 +208,39 @@ function App() {
     preserved: "Preserved",
     warnings: "Warnings",
   };
+  const reportWarningCount =
+    conversionResult?.warnings.filter(
+      (issue) => !preservedWarningCategories.has(issue.category)
+    ).length ?? 0;
+  const reviewSummaryItems = conversionResult
+    ? [
+        {
+          status: "converted" as const,
+          label: "Converted",
+          count: conversionResult.converted.length,
+        },
+        {
+          status: "approximated" as const,
+          label: "Approximated",
+          count: conversionResult.approximated.length,
+        },
+        {
+          status: "unsupported" as const,
+          label: "Unsupported",
+          count: conversionResult.unsupported.length,
+        },
+        {
+          status: "preserved" as const,
+          label: "Preserved",
+          count: conversionResult.preservedRules.length,
+        },
+        {
+          status: "warnings" as const,
+          label: "Warnings",
+          count: reportWarningCount,
+        },
+      ]
+    : [];
   const statusCounts: Record<ReviewStatus, number> = {
     all:
       filteredRules.length +
@@ -203,7 +265,7 @@ function App() {
   const hasIssues = conversionResult
     ? conversionResult.unsupported.length > 0 ||
       conversionResult.preservedRules.length > 0 ||
-      filteredWarnings.length > 0 ||
+      reportWarningCount > 0 ||
       conversionResult.approximated.length > 0
     : false;
   const clearReviewFilters = () => {
@@ -536,16 +598,58 @@ function App() {
                 {outputView === "review" && (
                   <div className="h-full overflow-auto bg-background p-4 text-sm">
                     {!conversionResult && (
-                      <p className="text-muted-foreground">
-                        Convert HTML and CSS to see review details.
-                      </p>
+                      <div className="rounded border p-4">
+                        <h3 className="mb-1 font-medium">Review Report</h3>
+                        <p className="text-muted-foreground">
+                          Convert HTML and CSS to see converted classes,
+                          approximations, unsupported declarations, and
+                          preserved selectors.
+                        </p>
+                      </div>
                     )}
                     {conversionResult && (
                       <div className="space-y-4">
+                        <div className="rounded border p-3">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <h3 className="font-medium">Conversion Report</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {confidenceLabel} confidence -{" "}
+                                {confidencePercent}% direct conversions
+                              </p>
+                            </div>
+                            {conversionResult.leftoverCss && (
+                              <Button
+                                onClick={copyLeftoverCss}
+                                variant="outline"
+                                size="sm"
+                                className="cursor-pointer"
+                              >
+                                <Copy />
+                                Copy preserved CSS
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {reviewSummaryItems.map((item) => (
+                              <button
+                                key={item.status}
+                                type="button"
+                                onClick={() => setReviewStatus(item.status)}
+                                className={`cursor-pointer rounded border px-2.5 py-1 text-left text-xs ${reviewBadgeClasses[item.status]}`}
+                              >
+                                <span className="font-medium">
+                                  {item.count}
+                                </span>{" "}
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <select
                             aria-label="selector filter"
-                            className="h-9 rounded-md border bg-background px-3 text-sm"
+                            className="h-9 cursor-pointer rounded-md border bg-background px-3 text-sm"
                             value={reviewSelector}
                             onChange={(event) =>
                               setReviewSelector(event.target.value)
@@ -558,16 +662,6 @@ function App() {
                               </option>
                             ))}
                           </select>
-                          <Button
-                            onClick={copyLeftoverCss}
-                            variant="outline"
-                            size="sm"
-                            disabled={!conversionResult.leftoverCss}
-                            className="cursor-pointer"
-                          >
-                            <Copy />
-                            Copy preserved CSS
-                          </Button>
                           <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
                             {(
                               [
@@ -599,6 +693,7 @@ function App() {
                               onClick={clearReviewFilters}
                               variant="outline"
                               size="sm"
+                              className="cursor-pointer"
                             >
                               Clear filters
                             </Button>
@@ -626,10 +721,15 @@ function App() {
                                   className="rounded border p-3"
                                 >
                                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                    <span className="font-medium">
-                                      {rule.selector}
-                                    </span>
-                                    <span className="text-muted-foreground">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-medium">
+                                        {rule.selector}
+                                      </span>
+                                      <ReviewBadge status="converted">
+                                        Converted
+                                      </ReviewBadge>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
                                       {rule.declarations.length} classes
                                     </span>
                                   </div>
@@ -648,20 +748,30 @@ function App() {
                               <h3 className="mb-2 font-medium">
                                 Unsupported Declarations
                               </h3>
-                              <div className="space-y-2 text-muted-foreground">
+                              <div className="space-y-2">
                                 {filteredUnsupported.map((issue, index) => (
-                                  <p key={`unsupported-${index}`}>
-                                    <span className="font-medium text-foreground">
-                                      {issue.selector}
-                                    </span>{" "}
-                                    <span className="rounded border px-1.5 py-0.5 text-xs text-foreground">
-                                      {issue.category}
-                                    </span>{" "}
-                                    {issue.property
-                                      ? `${issue.property}: ${issue.value}`
-                                      : ""}{" "}
+                                  <div
+                                    key={`unsupported-${index}`}
+                                    className="rounded border p-3 text-muted-foreground"
+                                  >
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        {issue.selector}
+                                      </span>
+                                      <ReviewBadge status="unsupported">
+                                        Unsupported
+                                      </ReviewBadge>
+                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                        {issue.category}
+                                      </span>
+                                    </div>
+                                    {issue.property && (
+                                      <div className="mb-1 font-mono text-xs text-foreground">
+                                        {issue.property}: {issue.value}
+                                      </div>
+                                    )}
                                     {issue.message}
-                                  </p>
+                                  </div>
                                 ))}
                               </div>
                             </section>
@@ -683,6 +793,9 @@ function App() {
                                       <span className="font-medium">
                                         {rule.selector}
                                       </span>
+                                      <ReviewBadge status="preserved">
+                                        Preserved
+                                      </ReviewBadge>
                                       <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
                                         {rule.category}
                                       </span>
@@ -703,17 +816,25 @@ function App() {
                           filteredWarnings.length > 0 && (
                             <section>
                               <h3 className="mb-2 font-medium">Warnings</h3>
-                              <div className="space-y-2 text-muted-foreground">
+                              <div className="space-y-2">
                                 {filteredWarnings.map((issue, index) => (
-                                  <p key={`warning-${index}`}>
-                                    <span className="font-medium text-foreground">
-                                      {issue.selector}
-                                    </span>{" "}
-                                    <span className="rounded border px-1.5 py-0.5 text-xs text-foreground">
-                                      {issue.category}
-                                    </span>{" "}
+                                  <div
+                                    key={`warning-${index}`}
+                                    className="rounded border p-3 text-muted-foreground"
+                                  >
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        {issue.selector}
+                                      </span>
+                                      <ReviewBadge status="warnings">
+                                        Warning
+                                      </ReviewBadge>
+                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                        {issue.category}
+                                      </span>
+                                    </div>
                                     {issue.message}
-                                  </p>
+                                  </div>
                                 ))}
                               </div>
                             </section>
@@ -723,17 +844,26 @@ function App() {
                           filteredApproximated.length > 0 && (
                             <section>
                               <h3 className="mb-2 font-medium">Approximated</h3>
-                              <div className="space-y-2 text-muted-foreground">
+                              <div className="space-y-2">
                                 {filteredApproximated.map((item, index) => (
-                                  <p key={`approximated-${index}`}>
-                                    <span className="font-medium text-foreground">
-                                      {item.selector ?? "CSS"}
-                                    </span>{" "}
-                                    <span className="font-medium text-foreground">
-                                      {item.property}: {item.value}
-                                    </span>{" "}
-                                    became {item.className}. {item.message}
-                                  </p>
+                                  <div
+                                    key={`approximated-${index}`}
+                                    className="rounded border p-3 text-muted-foreground"
+                                  >
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        {item.selector ?? "CSS"}
+                                      </span>
+                                      <ReviewBadge status="approximated">
+                                        Approximated
+                                      </ReviewBadge>
+                                    </div>
+                                    <div className="mb-1 font-mono text-xs text-foreground">
+                                      {item.property}: {item.value} -&gt;{" "}
+                                      {item.className}
+                                    </div>
+                                    {item.message}
+                                  </div>
                                 ))}
                               </div>
                             </section>
@@ -742,25 +872,33 @@ function App() {
                           filteredConverted.length > 0 && (
                             <section>
                               <h3 className="mb-2 font-medium">Converted</h3>
-                              <div className="space-y-2 text-muted-foreground">
+                              <div className="space-y-2">
                                 {filteredConverted.map((item, index) => (
-                                  <p key={`converted-${index}`}>
-                                    <span className="font-medium text-foreground">
-                                      {item.selector ?? "CSS"}
-                                    </span>{" "}
-                                    <span className="font-medium text-foreground">
-                                      {item.property}: {item.value}
-                                    </span>{" "}
-                                    became {item.className}.
-                                  </p>
+                                  <div
+                                    key={`converted-${index}`}
+                                    className="rounded border p-3"
+                                  >
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      <span className="font-medium">
+                                        {item.selector ?? "CSS"}
+                                      </span>
+                                      <ReviewBadge status="converted">
+                                        Converted
+                                      </ReviewBadge>
+                                    </div>
+                                    <div className="font-mono text-xs text-muted-foreground">
+                                      {item.property}: {item.value} -&gt;{" "}
+                                      {item.className}
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
                             </section>
                           )}
                         {!hasReviewItems && (
-                          <p className="text-muted-foreground">
+                          <div className="rounded border p-4 text-muted-foreground">
                             No review items match the current filters.
-                          </p>
+                          </div>
                         )}
                       </div>
                     )}
