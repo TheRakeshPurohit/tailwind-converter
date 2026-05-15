@@ -303,6 +303,7 @@ export const convertAttributesDetailed = (
         else if (styleValue === "currentcolor") tailwindValue = "current";
         else if (styleValue === "transparent") tailwindValue = "transparent";
         else if (styleValue === "none") tailwindValue = "none";
+        else if (styleValue.includes("var(")) tailwindValue = "";
         else {
           //only hex #ff0000 and rgb values rgb(255, 0, 0) are currently supported
           tailwindValue = NearestColor.from(colorCodes)(styleValue).name;

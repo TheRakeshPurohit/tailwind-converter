@@ -33,7 +33,11 @@ import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { track } from "@vercel/analytics";
 import type { ConversionMode } from "./util/converter";
-import { sanitizePreviewCss, sanitizePreviewHtml } from "./util/preview";
+import {
+  generatePreviewCss,
+  sanitizePreviewCss,
+  sanitizePreviewHtml,
+} from "./util/preview";
 
 type OutputView = "html" | "review" | "css" | "preview";
 type ReviewStatus = "all" | "converted" | "approximated" | "unsupported" | "warnings";
@@ -194,6 +198,9 @@ function App() {
   const sanitizedHtmlText = sanitizePreviewHtml(htmlText);
   const sanitizedTailwindText = sanitizePreviewHtml(tailwindText);
   const sanitizedCssText = sanitizePreviewCss(cssText);
+  const generatedPreviewCss = sanitizePreviewCss(
+    generatePreviewCss(sanitizedTailwindText)
+  );
   const originalPreviewDoc = `<!doctype html>
 <html>
 <head>
@@ -208,7 +215,7 @@ function App() {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="https://cdn.tailwindcss.com"></script>
+<style>${generatedPreviewCss}</style>
 </head>
 <body>${sanitizedTailwindText}</body>
 </html>`;
@@ -677,6 +684,9 @@ function App() {
                                     <span className="font-medium text-foreground">
                                       {issue.selector}
                                     </span>{" "}
+                                    <span className="rounded border px-1.5 py-0.5 text-xs text-foreground">
+                                      {issue.category}
+                                    </span>{" "}
                                     {issue.property
                                       ? `${issue.property}: ${issue.value}`
                                       : ""}{" "}
@@ -696,6 +706,9 @@ function App() {
                                   <p key={`warning-${index}`}>
                                     <span className="font-medium text-foreground">
                                       {issue.selector}
+                                    </span>{" "}
+                                    <span className="rounded border px-1.5 py-0.5 text-xs text-foreground">
+                                      {issue.category}
                                     </span>{" "}
                                     {issue.message}
                                   </p>
@@ -852,7 +865,7 @@ function App() {
                             </div>
                             <iframe
                               title="Converted preview"
-                              sandbox="allow-scripts"
+                              sandbox=""
                               srcDoc={convertedPreviewDoc}
                               className="h-[calc(100%-2.25rem)] w-full bg-white"
                             />

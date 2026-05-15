@@ -1,7 +1,11 @@
 import { expect, test } from "vitest";
 import { convertHtmlCss, cssToJson } from "../src/util/helper";
 import { parser } from "../src/util/helper";
-import { sanitizePreviewCss, sanitizePreviewHtml } from "../src/util/preview";
+import {
+  generatePreviewCss,
+  sanitizePreviewCss,
+  sanitizePreviewHtml,
+} from "../src/util/preview";
 import { css_beautify, html_beautify } from "js-beautify";
 
 test("adds 1 + 2 to equal 3", () => {
@@ -78,7 +82,9 @@ test("reports unsupported declarations instead of dropping them silently", () =>
       selector: ".card",
       property: "box-shadow",
       value: "0 1px 3px black",
-      message: "No Tailwind utility mapping exists yet for this declaration.",
+      category: "tailwind-gap",
+      message:
+        "Box shadows are preserved. Tailwind shadow utilities are not mapped yet.",
     },
   ]);
   expect(result.approximated).toEqual(
@@ -137,8 +143,9 @@ test("warns before flattening complex selectors", () => {
   expect(result.warnings).toEqual([
     {
       selector: ".card > h2",
+      category: "relationship-based",
       message:
-        "Complex selectors are reported for review because moving them inline can change behavior.",
+        "This selector targets related elements. Converting it safely would require changing HTML structure.",
     },
   ]);
   expect(result.leftoverCss).toContain(".card > h2");
@@ -360,8 +367,9 @@ test("preserves unsupported media queries as leftover CSS", () => {
   expect(result.warnings).toEqual([
     {
       selector: "@media (max-width: 700px)",
+      category: "media-query",
       message:
-        "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
+        "This at-rule is preserved because it does not match a default Tailwind responsive breakpoint.",
     },
   ]);
 });
@@ -376,6 +384,40 @@ test("parses declaration values that break simple colon splitting", () => {
   expect(result.leftoverCss).toContain(
     'background-image: url("https://example.com/a:b.png");'
   );
+});
+
+test("classifies css variable values", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { color: var(--brand-color); }`
+  );
+
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".card",
+      property: "color",
+      value: "var(--brand-color)",
+      category: "css-variable",
+      message:
+        "CSS variable values are preserved. Tailwind theme token mapping is not implemented yet.",
+    }),
+  ]);
+});
+
+test("classifies pseudo-element selectors", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card::before { content: ""; }`
+  );
+
+  expect(result.warnings).toEqual([
+    expect.objectContaining({
+      selector: ".card::before",
+      category: "pseudo-element",
+      message:
+        "Pseudo-elements are preserved because generated elements cannot be represented as classes on the original element.",
+    }),
+  ]);
 });
 
 test("sanitizes preview html by removing scripts and event handlers", () => {
@@ -395,4 +437,20 @@ test("escapes style closing tags in preview css", () => {
 
   expect(result).toContain("<\\/style>");
   expect(result).toContain("<script>");
+});
+
+test("generates scriptless preview css for common Tailwind classes", () => {
+  const result = generatePreviewCss(
+    `<div class="m-4 p-[17px] text-red-600 bg-white border border-solid hover:text-blue-700 md:p-8"></div>`
+  );
+
+  expect(result).toContain(".m-4{margin: 1rem;}");
+  expect(result).toContain(".p-\\[17px\\]{padding: 17px;}");
+  expect(result).toContain(".text-red-600{color: #dc2626;}");
+  expect(result).toContain(".bg-white{background-color: #ffffff;}");
+  expect(result).toContain(".border{border-width: 1px;}");
+  expect(result).toContain(".hover\\:text-blue-700:hover{color: #1d4ed8;}");
+  expect(result).toContain(
+    "@media (min-width: 768px){.md\\:p-8{padding: 2rem;}}"
+  );
 });

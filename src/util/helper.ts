@@ -54,10 +54,22 @@ type NormalizedDeclarations = {
   preservedDeclarations: Declaration[];
 };
 
+export type UnsupportedCategory =
+  | "unsupported-property"
+  | "unsupported-value"
+  | "complex-selector"
+  | "relationship-based"
+  | "pseudo-element"
+  | "media-query"
+  | "css-variable"
+  | "compound-shorthand"
+  | "tailwind-gap";
+
 export type ConversionIssue = {
   selector: string;
   property?: string;
   value?: string;
+  category: UnsupportedCategory;
   message: string;
 };
 
@@ -97,6 +109,132 @@ const pseudoClassVariants: { [pseudoClass: string]: string } = {
   enabled: "enabled",
   "first-child": "first",
   "last-child": "last",
+};
+
+const tailwindGapProperties = new Set([
+  "box-shadow",
+  "filter",
+  "grid-template-columns",
+  "grid-template-rows",
+  "grid-column",
+  "grid-row",
+]);
+
+const unsupportedProperties = new Set([
+  "animation",
+  "background-image",
+  "border-spacing",
+  "transition-property",
+  "transition-timing-function",
+]);
+
+const classifyUnsupported = ({
+  selector,
+  property,
+  value,
+  fallback = "unsupported-property",
+}: {
+  selector: string;
+  property?: string;
+  value?: string;
+  fallback?: UnsupportedCategory;
+}): UnsupportedCategory => {
+  const normalizedProperty = property?.toLowerCase();
+  const normalizedValue = value?.toLowerCase() ?? "";
+
+  if (selector.includes("::")) return "pseudo-element";
+  if (/\s|>|\+|~/.test(selector.trim())) return "relationship-based";
+  if (normalizedValue.includes("var(")) return "css-variable";
+  if (normalizedProperty && tailwindGapProperties.has(normalizedProperty)) {
+    return "tailwind-gap";
+  }
+  if (normalizedProperty && unsupportedProperties.has(normalizedProperty)) {
+    return "unsupported-property";
+  }
+  if (
+    normalizedProperty === "background" ||
+    normalizedProperty === "font" ||
+    normalizedProperty?.startsWith("border")
+  ) {
+    return "compound-shorthand";
+  }
+
+  return fallback;
+};
+
+const getUnsupportedMessage = ({
+  property,
+  value,
+  category,
+  fallbackMessage,
+}: {
+  property?: string;
+  value?: string;
+  category: UnsupportedCategory;
+  fallbackMessage: string;
+}) => {
+  const normalizedProperty = property?.toLowerCase();
+  const normalizedValue = value?.toLowerCase() ?? "";
+
+  if (category === "css-variable") {
+    return "CSS variable values are preserved. Tailwind theme token mapping is not implemented yet.";
+  }
+
+  if (category === "relationship-based") {
+    return "This selector targets related elements. Converting it safely would require changing HTML structure.";
+  }
+
+  if (category === "pseudo-element") {
+    return "Pseudo-elements are preserved because generated elements cannot be represented as classes on the original element.";
+  }
+
+  if (category === "media-query") {
+    return "This at-rule is preserved because it does not match a default Tailwind responsive breakpoint.";
+  }
+
+  if (normalizedProperty === "box-shadow") {
+    return "Box shadows are preserved. Tailwind shadow utilities are not mapped yet.";
+  }
+
+  if (
+    normalizedProperty === "background-image" ||
+    normalizedValue.includes("gradient(")
+  ) {
+    return "Background images and gradients are preserved. URL and gradient parsing is not implemented yet.";
+  }
+
+  if (normalizedProperty === "animation") {
+    return "Animations are preserved. animation and @keyframes conversion is not implemented yet.";
+  }
+
+  if (
+    normalizedProperty === "grid-template-columns" ||
+    normalizedProperty === "grid-template-rows"
+  ) {
+    return "Grid templates are preserved. Converting this safely requires template parsing.";
+  }
+
+  if (normalizedProperty === "grid-column" || normalizedProperty === "grid-row") {
+    return "Grid placement is preserved. Mapping spans and line numbers to Tailwind is not implemented yet.";
+  }
+
+  if (normalizedProperty === "transition-property") {
+    return "Transition properties are preserved. Tailwind transition-property mapping is not implemented yet.";
+  }
+
+  if (normalizedProperty === "transition-timing-function") {
+    return "Transition timing functions are preserved. Tailwind easing mapping is not implemented yet.";
+  }
+
+  if (category === "compound-shorthand") {
+    return "This shorthand is preserved because some parts could not be safely expanded.";
+  }
+
+  if (category === "tailwind-gap") {
+    return "This CSS maps to a Tailwind utility family that is not supported yet.";
+  }
+
+  return fallbackMessage;
 };
 
 const splitSelectorList = (selector: string) => {
@@ -644,6 +782,7 @@ export const cssToTailwindRules = (
   } catch (error) {
     warnings.push({
       selector: "CSS",
+      category: "unsupported-value",
       message:
         error instanceof Error
           ? `PostCSS could not parse this stylesheet: ${error.message}`
@@ -654,9 +793,16 @@ export const cssToTailwindRules = (
 
   root.walkAtRules((atRule) => {
     if (atRule.name !== "media" && atRule.nodes?.some((node) => node.type === "rule")) {
+      const selector = atRuleToString(atRule);
+      const category = "media-query";
       warnings.push({
-        selector: atRuleToString(atRule),
-        message: "This at-rule is preserved for review because only simple media queries can become Tailwind variants.",
+        selector,
+        category,
+        message: getUnsupportedMessage({
+          category,
+          fallbackMessage:
+            "This at-rule is preserved for review because only simple media queries can become Tailwind variants.",
+        }),
       });
     }
   });
@@ -674,10 +820,16 @@ export const cssToTailwindRules = (
     const unsupportedAtRule = ruleAtRules.length > 0 && !variantPrefix;
 
     if (unsupportedAtRule) {
+      const selector = ruleAtRules.join(" ");
+      const category = "media-query";
       warnings.push({
-        selector: ruleAtRules.join(" "),
-        message:
-          "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
+        selector,
+        category,
+        message: getUnsupportedMessage({
+          category,
+          fallbackMessage:
+            "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
+        }),
       });
     }
 
@@ -685,6 +837,7 @@ export const cssToTailwindRules = (
       if (node.type !== "decl" && node.type !== "comment") {
         warnings.push({
           selector: rule.selector,
+          category: "unsupported-value",
           message: `Nested ${node.type} nodes are preserved for review.`,
         });
       }
@@ -724,11 +877,23 @@ export const cssToTailwindRules = (
 
       if (item.status === "unsupported") {
         splitSelectorList(rule.selector).forEach((selector) => {
+          const category = classifyUnsupported({
+            selector,
+            property: item.property,
+            value: item.value,
+          });
           unsupported.push({
             selector,
             property: item.property,
             value: item.value,
-            message: item.message ?? "Unsupported CSS declaration.",
+            category,
+            message: getUnsupportedMessage({
+              property: item.property,
+              value: item.value,
+              category,
+              fallbackMessage:
+                item.message ?? "Unsupported CSS declaration.",
+            }),
           });
         });
       }
@@ -739,9 +904,17 @@ export const cssToTailwindRules = (
       const canApply = selectorAnalysis.canApply && !unsupportedAtRule;
 
       if (selectorAnalysis.warning) {
+        const category = classifyUnsupported({
+          selector,
+          fallback: "complex-selector",
+        });
         warnings.push({
           selector,
-          message: selectorAnalysis.warning,
+          category,
+          message: getUnsupportedMessage({
+            category,
+            fallbackMessage: selectorAnalysis.warning,
+          }),
         });
       }
 
