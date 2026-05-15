@@ -17,15 +17,28 @@ import {
 } from "./util/helper";
 import type { ConversionResult } from "./util/helper";
 import { Header } from "./components/header";
-import { ClipboardList, Code2, Copy, FileWarning, Undo } from "lucide-react";
+import {
+  ClipboardList,
+  Code2,
+  Copy,
+  Eye,
+  FileWarning,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Undo,
+} from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { track } from "@vercel/analytics";
 import type { ConversionMode } from "./util/converter";
+import { sanitizePreviewCss, sanitizePreviewHtml } from "./util/preview";
 
-type OutputView = "html" | "review" | "css";
+type OutputView = "html" | "review" | "css" | "preview";
 type ReviewStatus = "all" | "converted" | "approximated" | "unsupported" | "warnings";
+type PreviewViewport = "desktop" | "tablet" | "mobile";
+type PreviewMode = "split" | "original" | "converted";
 
 function App() {
   const [htmlText, setHtmlText] = useState("");
@@ -38,6 +51,13 @@ function App() {
   const [outputView, setOutputView] = useState<OutputView>("html");
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus>("all");
   const [reviewSelector, setReviewSelector] = useState("all");
+  const [previewViewport, setPreviewViewport] =
+    useState<PreviewViewport>("desktop");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("split");
+  const [lastConversionInput, setLastConversionInput] = useState({
+    html: "",
+    css: "",
+  });
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem("vite-ui-theme");
     return savedTheme ? savedTheme : "dark";
@@ -166,6 +186,36 @@ function App() {
     setReviewSelector("all");
     setReviewStatus("all");
   };
+  const previewWidth: Record<PreviewViewport, string> = {
+    desktop: "100%",
+    tablet: "768px",
+    mobile: "390px",
+  };
+  const sanitizedHtmlText = sanitizePreviewHtml(htmlText);
+  const sanitizedTailwindText = sanitizePreviewHtml(tailwindText);
+  const sanitizedCssText = sanitizePreviewCss(cssText);
+  const originalPreviewDoc = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>${sanitizedCssText}</style>
+</head>
+<body>${sanitizedHtmlText}</body>
+</html>`;
+  const convertedPreviewDoc = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>${sanitizedTailwindText}</body>
+</html>`;
+  const previewIsStale =
+    Boolean(tailwindText) &&
+    (lastConversionInput.html !== htmlText ||
+      lastConversionInput.css !== cssText);
 
   const getNewHtml = useCallback(
     (html: string, css: string, mode: ConversionMode = conversionMode) => {
@@ -181,6 +231,7 @@ function App() {
         max_preserve_newlines: 0,
       });
       setConversionResult({ ...result, html: formattedHtml });
+      setLastConversionInput({ html, css });
       return formattedHtml;
     },
     [conversionMode]
@@ -437,6 +488,14 @@ function App() {
                     <FileWarning />
                     CSS
                   </Button>
+                  <Button
+                    onClick={() => setOutputView("preview")}
+                    variant={outputView === "preview" ? "secondary" : "ghost"}
+                    className="h-9 rounded-none px-3"
+                  >
+                    <Eye />
+                    Preview
+                  </Button>
                 </div>
                 {conversionResult && (
                   <div className="flex min-w-56 flex-wrap items-center gap-2 text-sm">
@@ -461,6 +520,11 @@ function App() {
                     {conversionResult.leftoverCss && (
                       <span className="rounded border px-2 py-1">
                         CSS preserved
+                      </span>
+                    )}
+                    {previewIsStale && (
+                      <span className="rounded border border-destructive/40 px-2 py-1 text-destructive">
+                        Preview stale
                       </span>
                     )}
                   </div>
@@ -685,6 +749,117 @@ function App() {
                           )}
                       </div>
                     )}
+                  </div>
+                )}
+                {outputView === "preview" && (
+                  <div className="flex h-full flex-col bg-background">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+                      <div>
+                        <h3 className="text-sm font-medium">Preview</h3>
+                        {previewIsStale && (
+                          <p className="text-xs text-destructive">
+                            Input changed after the last conversion.
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
+                          {(["split", "original", "converted"] as PreviewMode[]).map(
+                            (mode) => (
+                              <Button
+                                key={mode}
+                                onClick={() => setPreviewMode(mode)}
+                                variant={
+                                  previewMode === mode ? "secondary" : "ghost"
+                                }
+                                className="h-9 rounded-none px-3 capitalize"
+                              >
+                                {mode}
+                              </Button>
+                            )
+                          )}
+                        </div>
+                        <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
+                          <Button
+                            onClick={() => setPreviewViewport("desktop")}
+                            variant={
+                              previewViewport === "desktop"
+                                ? "secondary"
+                                : "ghost"
+                            }
+                            className="h-9 rounded-none px-3"
+                          >
+                            <Monitor />
+                            Desktop
+                          </Button>
+                          <Button
+                            onClick={() => setPreviewViewport("tablet")}
+                            variant={
+                              previewViewport === "tablet"
+                                ? "secondary"
+                                : "ghost"
+                            }
+                            className="h-9 rounded-none px-3"
+                          >
+                            <Tablet />
+                            Tablet
+                          </Button>
+                          <Button
+                            onClick={() => setPreviewViewport("mobile")}
+                            variant={
+                              previewViewport === "mobile"
+                                ? "secondary"
+                                : "ghost"
+                            }
+                            className="h-9 rounded-none px-3"
+                          >
+                            <Smartphone />
+                            Mobile
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-auto p-4">
+                      <div
+                        className={
+                          previewMode === "split"
+                            ? "mx-auto grid h-full min-h-[28rem] gap-4 lg:grid-cols-2"
+                            : "mx-auto grid h-full min-h-[28rem] gap-4"
+                        }
+                        style={{
+                          maxWidth: previewWidth[previewViewport],
+                        }}
+                      >
+                        {(previewMode === "split" ||
+                          previewMode === "original") && (
+                          <section className="min-h-0 overflow-hidden rounded border">
+                            <div className="border-b px-3 py-2 text-sm font-medium">
+                              Original
+                            </div>
+                            <iframe
+                              title="Original preview"
+                              sandbox=""
+                              srcDoc={originalPreviewDoc}
+                              className="h-[calc(100%-2.25rem)] w-full bg-white"
+                            />
+                          </section>
+                        )}
+                        {(previewMode === "split" ||
+                          previewMode === "converted") && (
+                          <section className="min-h-0 overflow-hidden rounded border">
+                            <div className="border-b px-3 py-2 text-sm font-medium">
+                              Converted
+                            </div>
+                            <iframe
+                              title="Converted preview"
+                              sandbox="allow-scripts"
+                              srcDoc={convertedPreviewDoc}
+                              className="h-[calc(100%-2.25rem)] w-full bg-white"
+                            />
+                          </section>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { convertHtmlCss, cssToJson } from "../src/util/helper";
 import { parser } from "../src/util/helper";
+import { sanitizePreviewCss, sanitizePreviewHtml } from "../src/util/preview";
 import { css_beautify, html_beautify } from "js-beautify";
 
 test("adds 1 + 2 to equal 3", () => {
@@ -375,4 +376,23 @@ test("parses declaration values that break simple colon splitting", () => {
   expect(result.leftoverCss).toContain(
     'background-image: url("https://example.com/a:b.png");'
   );
+});
+
+test("sanitizes preview html by removing scripts and event handlers", () => {
+  const result = sanitizePreviewHtml(
+    `<div onclick="alert('x')">Safe</div><script>alert("x")</script>`
+  );
+
+  expect(result).toContain("<div>Safe</div>");
+  expect(result).not.toContain("<script");
+  expect(result).not.toContain("onclick");
+});
+
+test("escapes style closing tags in preview css", () => {
+  const result = sanitizePreviewCss(
+    `body { color: red; }</style><script>alert("x")</script>`
+  );
+
+  expect(result).toContain("<\\/style>");
+  expect(result).toContain("<script>");
 });
