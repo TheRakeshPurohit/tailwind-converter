@@ -71,20 +71,20 @@ h2 {
 test("reports unsupported declarations instead of dropping them silently", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
-    `.card { box-shadow: 0 1px 3px black; margin: 17px; }`
+    `.card { animation: pulse 1s infinite; margin: 17px; }`
   );
 
   expect(result.html).toContain('class="card m-4"');
   expect(result.html).toContain("<style>.card {");
-  expect(result.leftoverCss).toContain("box-shadow: 0 1px 3px black;");
+  expect(result.leftoverCss).toContain("animation: pulse 1s infinite;");
   expect(result.unsupported).toEqual([
     {
       selector: ".card",
-      property: "box-shadow",
-      value: "0 1px 3px black",
-      category: "tailwind-gap",
+      property: "animation",
+      value: "pulse 1s infinite",
+      category: "unsupported-property",
       message:
-        "Box shadows are preserved. Tailwind shadow utilities are not mapped yet.",
+        "Animations are preserved. animation and @keyframes conversion is not implemented yet.",
     },
   ]);
   expect(result.approximated).toEqual(
@@ -97,6 +97,134 @@ test("reports unsupported declarations instead of dropping them silently", () =>
       }),
     ])
   );
+});
+
+test("maps box-shadow to the nearest Tailwind shadow token", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }`
+  );
+
+  expect(result.html).toContain('class="shadow-lg"');
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual([
+    expect.objectContaining({
+      selector: ".card",
+      property: "box-shadow",
+      value: "0 10px 15px rgba(0, 0, 0, 0.1)",
+      className: "shadow-lg",
+      message: "Mapped to the nearest Tailwind design token.",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary box-shadow values", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { box-shadow: 0 7px 22px rgba(0, 0, 0, 0.16); }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)]"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual([
+    expect.objectContaining({
+      selector: ".card",
+      property: "box-shadow",
+      className: "shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)]",
+    }),
+  ]);
+});
+
+test("converts empty box-shadow to shadow-none", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { box-shadow: none; }`
+  );
+
+  expect(result.html).toContain('class="shadow-none"');
+  expect(result.leftoverCss).toBe("");
+});
+
+test("converts common grid template columns and rows", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout">Grid</section></body></html>`,
+    `.layout {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+    }`
+  );
+
+  expect(result.html).toContain('class="grid grid-cols-3 grid-rows-2"');
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".layout",
+        property: "grid-template-columns",
+        className: "grid-cols-3",
+      }),
+      expect.objectContaining({
+        selector: ".layout",
+        property: "grid-template-rows",
+        className: "grid-rows-2",
+      }),
+    ])
+  );
+});
+
+test("converts none and subgrid grid templates", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout">Grid</section></body></html>`,
+    `.layout {
+      grid-template-columns: subgrid;
+      grid-template-rows: none;
+    }`
+  );
+
+  expect(result.html).toContain('class="grid-cols-subgrid grid-rows-none"');
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves complex grid templates in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout">Grid</section></body></html>`,
+    `.layout { grid-template-columns: 200px 1fr; }`
+  );
+
+  expect(result.html).toContain('class="layout"');
+  expect(result.leftoverCss).toContain("grid-template-columns: 200px 1fr;");
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".layout",
+      property: "grid-template-columns",
+      value: "200px 1fr",
+      category: "unsupported-property",
+      message:
+        "This grid template is preserved because it could not be mapped to a supported Tailwind grid utility.",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary grid templates", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout">Grid</section></body></html>`,
+    `.layout { grid-template-columns: 200px 1fr; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="grid-cols-[200px_1fr]"');
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual([
+    expect.objectContaining({
+      selector: ".layout",
+      property: "grid-template-columns",
+      className: "grid-cols-[200px_1fr]",
+    }),
+  ]);
 });
 
 test("can prefer exact arbitrary values for supported declarations", () => {
@@ -418,6 +546,68 @@ test("classifies pseudo-element selectors", () => {
         "Pseudo-elements are preserved because generated elements cannot be represented as classes on the original element.",
     }),
   ]);
+  expect(result.leftoverCss).toContain('.card::before {\n  content: "";');
+  expect(result.preservedRules).toEqual([
+    expect.objectContaining({
+      selector: ".card::before",
+      category: "pseudo-element",
+      css: expect.stringContaining('content: "";'),
+    }),
+  ]);
+  expect(result.converted).toEqual([]);
+  expect(result.approximated).toEqual([]);
+  expect(result.html).not.toContain("undefined");
+  expect(result.rules[0]).toEqual(
+    expect.objectContaining({
+      selector: ".card::before",
+      classes: "",
+      declarations: [],
+      canApply: false,
+    })
+  );
+});
+
+test("preserves pseudo-elements without leaking generated content classes", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta::before { content: "→"; margin-right: 0.5rem; }
+     .cta::after { content: ""; display: block; }`
+  );
+
+  expect(result.leftoverCss).toContain(".cta::before");
+  expect(result.leftoverCss).toContain('content: "→";');
+  expect(result.leftoverCss).toContain(".cta::after");
+  expect(result.leftoverCss).toContain('content: "";');
+  expect(result.preservedRules).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".cta::before",
+        category: "pseudo-element",
+        css: expect.stringContaining('content: "→";'),
+      }),
+      expect.objectContaining({
+        selector: ".cta::after",
+        category: "pseudo-element",
+        css: expect.stringContaining('content: "";'),
+      }),
+    ])
+  );
+  expect(result.warnings).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".cta::before",
+        category: "pseudo-element",
+      }),
+      expect.objectContaining({
+        selector: ".cta::after",
+        category: "pseudo-element",
+      }),
+    ])
+  );
+  expect(result.converted).toEqual([]);
+  expect(result.approximated).toEqual([]);
+  expect(result.html).toContain('class="cta"');
+  expect(result.html).not.toContain("undefined");
 });
 
 test("sanitizes preview html by removing scripts and event handlers", () => {
@@ -441,7 +631,7 @@ test("escapes style closing tags in preview css", () => {
 
 test("generates scriptless preview css for common Tailwind classes", () => {
   const result = generatePreviewCss(
-    `<div class="m-4 p-[17px] text-red-600 bg-white border border-solid hover:text-blue-700 md:p-8"></div>`
+    `<div class="m-4 p-[17px] text-red-600 bg-white border border-solid shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
   );
 
   expect(result).toContain(".m-4{margin: 1rem;}");
@@ -449,6 +639,12 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(".text-red-600{color: #dc2626;}");
   expect(result).toContain(".bg-white{background-color: #ffffff;}");
   expect(result).toContain(".border{border-width: 1px;}");
+  expect(result).toContain(
+    ".shadow-lg{box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);}"
+  );
+  expect(result).toContain(
+    ".shadow-\\[0_7px_22px_rgba\\(0\\\\\\,_0\\\\\\,_0\\\\\\,_0\\.16\\)\\]{box-shadow: 0 7px 22px rgba(0, 0, 0, 0.16);}"
+  );
   expect(result).toContain(".hover\\:text-blue-700:hover{color: #1d4ed8;}");
   expect(result).toContain(
     "@media (min-width: 768px){.md\\:p-8{padding: 2rem;}}"

@@ -106,13 +106,13 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 ### Generally supported
 
 - **Layout:** display, position, top/right/bottom/left, z-index, box sizing, overflow, object fit, object position, visibility, float, clear, isolation, columns
-- **Flexbox and grid basics:** flex direction, flex wrap, flex grow, flex shrink, flex basis, order, gap, row gap, column gap, justify, align, place, grid auto flow, grid auto columns, grid auto rows
+- **Flexbox and grid basics:** flex direction, flex wrap, flex grow, flex shrink, flex basis, order, gap, row gap, column gap, justify, align, place, grid auto flow, grid auto columns, grid auto rows, simple grid templates
 - **Spacing:** margin, padding, gap, scroll margin, scroll padding
 - **Sizing:** width, height, min/max width, min/max height
 - **Typography:** font family, font size, font style, font weight, line height, letter spacing, text align, text color, text decoration, text transform, text overflow, text indent, vertical align, whitespace, word break, list style
 - **Backgrounds:** background color, attachment, clip, origin, position, repeat, size
 - **Borders and outlines:** border width, border color, border style, border radius, outline width, outline color, outline style, outline offset
-- **Effects:** opacity, mix blend mode, background blend mode
+- **Effects:** opacity, box shadow, mix blend mode, background blend mode
 - **Filters:** blur, brightness, contrast, grayscale, hue rotate, invert, saturate, sepia, and backdrop equivalents
 - **Transforms:** scale, rotate, translate, skew, transform origin
 - **Interactivity:** cursor, appearance, accent color, caret color, pointer events, resize, scroll behavior, scroll snap, touch action, user select, will change
@@ -125,7 +125,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - Complex grid templates and grid line placement
 - Space-between utilities from sibling relationships
 - Divide and ring utilities
-- Box shadow and drop shadow
+- Drop shadow
 - Background images and gradients
 - Transition property and timing function
 - Animation
@@ -141,12 +141,12 @@ Some Tailwind utility families are not generated because their underlying CSS is
 
 | Tailwind utility family | Related CSS | Current status |
 | --- | --- | --- |
-| `shadow-*` | `box-shadow` | Preserved for review |
+| `shadow-*` | `box-shadow` | Supported. Tokens mode maps to the nearest Tailwind v4 shadow token; Exact mode uses arbitrary values. |
 | `drop-shadow-*` | `filter: drop-shadow(...)` | Preserved for review |
 | `ring-*`, `ring-offset-*` | Tailwind ring variables and `box-shadow` | Not converted |
 | `divide-*` | Child/sibling border selectors | Not converted |
 | `space-x-*`, `space-y-*` | Child/sibling margin selectors | Not converted |
-| `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Mostly not converted |
+| `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Supports `none`, `subgrid`, and `repeat(1..12, minmax(0, 1fr))`. Exact mode uses arbitrary values. |
 | `col-span-*`, `row-span-*`, `col-start-*`, `row-start-*` | `grid-column`, `grid-row` | Mostly not converted |
 | Gradient utilities such as `from-*`, `via-*`, `to-*` | `background-image`, gradient stops | Not converted |
 | `animate-*` | `animation`, `@keyframes` | Not converted |

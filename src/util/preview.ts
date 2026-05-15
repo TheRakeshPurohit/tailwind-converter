@@ -60,6 +60,25 @@ const fontSizes: { [utility: string]: string } = {
   "text-9xl": "font-size: 8rem;",
 };
 
+const gridTemplates = Object.fromEntries(
+  Array.from({ length: 12 }, (_, index) => {
+    const count = index + 1;
+    return [
+      `grid-cols-${count}`,
+      `grid-template-columns: repeat(${count}, minmax(0, 1fr));`,
+    ];
+  })
+);
+const gridTemplateRows = Object.fromEntries(
+  Array.from({ length: 12 }, (_, index) => {
+    const count = index + 1;
+    return [
+      `grid-rows-${count}`,
+      `grid-template-rows: repeat(${count}, minmax(0, 1fr));`,
+    ];
+  })
+);
+
 const staticUtilities: { [utility: string]: string } = {
   block: "display: block;",
   inline: "display: inline;",
@@ -128,7 +147,26 @@ const staticUtilities: { [utility: string]: string } = {
   "border-dotted": "border-style: dotted;",
   "border-double": "border-style: double;",
   "border-none": "border-style: none;",
+  "grid-cols-none": "grid-template-columns: none;",
+  "grid-cols-subgrid": "grid-template-columns: subgrid;",
+  "grid-rows-none": "grid-template-rows: none;",
+  "grid-rows-subgrid": "grid-template-rows: subgrid;",
+  "shadow-none": "box-shadow: none;",
+  "shadow-2xs": "box-shadow: 0 1px rgb(0 0 0 / 0.05);",
+  "shadow-xs": "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
+  "shadow-sm":
+    "box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);",
+  "shadow-md":
+    "box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);",
+  "shadow-lg":
+    "box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);",
+  "shadow-xl":
+    "box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);",
+  "shadow-2xl": "box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);",
+  "shadow-inner": "box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);",
   ...fontSizes,
+  ...gridTemplates,
+  ...gridTemplateRows,
 };
 
 const cssEscape = (className: string) => {
@@ -192,6 +230,9 @@ const declarationsForUtility = (utility: string) => {
       text: "font-size",
       leading: "line-height",
       rounded: "border-radius",
+      shadow: "box-shadow",
+      "grid-cols": "grid-template-columns",
+      "grid-rows": "grid-template-rows",
       bg: "background-color",
       border: "border-color",
     };

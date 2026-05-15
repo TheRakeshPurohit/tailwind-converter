@@ -124,7 +124,135 @@ const exactClassFor = (property: string, value: string) => {
   if (property === "transition-delay") {
     return `delay-[${arbitraryValue(value)}]`;
   }
+  if (property === "box-shadow") {
+    return `shadow-[${arbitraryValue(value)}]`;
+  }
+  if (property === "grid-template-columns") {
+    return `grid-cols-[${arbitraryValue(value)}]`;
+  }
+  if (property === "grid-template-rows") {
+    return `grid-rows-[${arbitraryValue(value)}]`;
+  }
   return "";
+};
+
+const gridTemplateClassFor = (property: string, value: string) => {
+  const prefix =
+    property === "grid-template-columns" ? "grid-cols" : "grid-rows";
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+
+  if (normalized === "none") return `${prefix}-none`;
+  if (normalized === "subgrid") return `${prefix}-subgrid`;
+
+  const repeatMatch = normalized.match(
+    /^repeat\(\s*(\d+)\s*,\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*\)$/
+  );
+  if (repeatMatch) {
+    const count = Number(repeatMatch[1]);
+    if (count >= 1 && count <= 12) return `${prefix}-${count}`;
+  }
+
+  return "";
+};
+
+type ShadowToken = {
+  className: string;
+  x: number;
+  y: number;
+  blur: number;
+  spread: number;
+  inset?: boolean;
+};
+
+const shadowTokens: ShadowToken[] = [
+  { className: "shadow-2xs", x: 0, y: 1, blur: 0, spread: 0 },
+  { className: "shadow-xs", x: 0, y: 1, blur: 2, spread: 0 },
+  { className: "shadow-sm", x: 0, y: 1, blur: 3, spread: 0 },
+  { className: "shadow-md", x: 0, y: 4, blur: 6, spread: -1 },
+  { className: "shadow-lg", x: 0, y: 10, blur: 15, spread: -3 },
+  { className: "shadow-xl", x: 0, y: 20, blur: 25, spread: -5 },
+  { className: "shadow-2xl", x: 0, y: 25, blur: 50, spread: -12 },
+  { className: "shadow-inner", x: 0, y: 2, blur: 4, spread: 0, inset: true },
+];
+
+const splitShadowLayers = (value: string) => {
+  const layers: string[] = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    if (character === ")") depth = Math.max(0, depth - 1);
+    if (character === "," && depth === 0) {
+      layers.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  layers.push(value.slice(start).trim());
+  return layers.filter(Boolean);
+};
+
+const parseShadowLengths = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  const inset = /\binset\b/.test(normalized);
+  const tokens = normalized
+    .replace(/\binset\b/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const lengths: number[] = [];
+
+  for (const token of tokens) {
+    if (/^-?\d*\.?\d+px$/.test(token)) {
+      lengths.push(Number(token.replace("px", "")));
+    } else if (/^-?\d*\.?\d+rem$/.test(token)) {
+      lengths.push(Number(token.replace("rem", "")) * 16);
+    } else if (token === "0" || token === "-0") {
+      lengths.push(0);
+    } else if (lengths.length >= 2) {
+      break;
+    }
+
+    if (lengths.length === 4) break;
+  }
+
+  if (lengths.length < 2) return null;
+
+  return {
+    x: lengths[0],
+    y: lengths[1],
+    blur: lengths[2] ?? 0,
+    spread: lengths[3] ?? 0,
+    inset,
+  };
+};
+
+const shadowClassFor = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "none") return "shadow-none";
+
+  const firstLayer = splitShadowLayers(normalized)[0];
+  const shadow = parseShadowLengths(firstLayer);
+  if (!shadow) return "";
+
+  const candidates = shadowTokens.filter(
+    (token) => Boolean(token.inset) === shadow.inset
+  );
+  const nearest = candidates.reduce(
+    (closest, token) => {
+      const score =
+        Math.abs(token.x - shadow.x) +
+        Math.abs(token.y - shadow.y) +
+        Math.abs(token.blur - shadow.blur) +
+        Math.abs(token.spread - shadow.spread);
+
+      return score < closest.score ? { token, score } : closest;
+    },
+    { token: candidates[0], score: Number.POSITIVE_INFINITY }
+  );
+
+  return nearest.token?.className ?? "";
 };
 
 export const convertAttributesDetailed = (
@@ -240,6 +368,13 @@ export const convertAttributesDetailed = (
     } else if (style === "cursor") {
       abbreviation = "cursor";
       tailwindValue = styleValue;
+    } else if (style === "box-shadow") {
+      tailwindValue = shadowClassFor(styleValue);
+    } else if (
+      style === "grid-template-columns" ||
+      style === "grid-template-rows"
+    ) {
+      tailwindValue = gridTemplateClassFor(style, styleValue);
     } else if (style === "transition-duration") {
       abbreviation = "duration";
       if (!styleValue.includes("ms")) styleNumber = styleNumber * 1000;

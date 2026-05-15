@@ -10,11 +10,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { css_beautify, html_beautify } from "js-beautify";
-import {
-  convertHtmlCss,
-  initialHTML,
-  initialCSS,
-} from "./util/helper";
+import { convertHtmlCss, initialHTML, initialCSS } from "./util/helper";
 import type { ConversionResult } from "./util/helper";
 import { Header } from "./components/header";
 import {
@@ -40,7 +36,13 @@ import {
 } from "./util/preview";
 
 type OutputView = "html" | "review" | "css" | "preview";
-type ReviewStatus = "all" | "converted" | "approximated" | "unsupported" | "warnings";
+type ReviewStatus =
+  | "all"
+  | "converted"
+  | "approximated"
+  | "unsupported"
+  | "preserved"
+  | "warnings";
 type PreviewViewport = "desktop" | "tablet" | "mobile";
 type PreviewMode = "split" | "original" | "converted";
 
@@ -94,8 +96,17 @@ function App() {
     setCssText(initialCSS);
   };
 
+  const preservedWarningCategories = new Set([
+    "relationship-based",
+    "pseudo-element",
+    "media-query",
+  ]);
   const reviewCount = conversionResult
-    ? conversionResult.unsupported.length + conversionResult.warnings.length
+    ? conversionResult.unsupported.length +
+      conversionResult.preservedRules.length +
+      conversionResult.warnings.filter(
+        (issue) => !preservedWarningCategories.has(issue.category)
+      ).length
     : 0;
   const convertedCount = conversionResult
     ? conversionResult.converted.length + conversionResult.approximated.length
@@ -121,6 +132,7 @@ function App() {
     ? Array.from(
         new Set([
           ...conversionResult.rules.map((rule) => rule.selector),
+          ...conversionResult.preservedRules.map((rule) => rule.selector),
           ...conversionResult.unsupported.map((issue) => issue.selector),
           ...conversionResult.warnings.map((issue) => issue.selector),
           ...conversionResult.converted
@@ -138,8 +150,9 @@ function App() {
     conversionResult?.rules.filter((rule) => selectorMatches(rule.selector)) ??
     [];
   const filteredConverted =
-    conversionResult?.converted.filter((item) => selectorMatches(item.selector)) ??
-    [];
+    conversionResult?.converted.filter((item) =>
+      selectorMatches(item.selector)
+    ) ?? [];
   const filteredApproximated =
     conversionResult?.approximated.filter((item) =>
       selectorMatches(item.selector)
@@ -148,34 +161,51 @@ function App() {
     conversionResult?.unsupported.filter((issue) =>
       selectorMatches(issue.selector)
     ) ?? [];
-  const filteredWarnings =
-    conversionResult?.warnings.filter((issue) =>
-      selectorMatches(issue.selector)
+  const filteredPreservedRules =
+    conversionResult?.preservedRules.filter((rule) =>
+      selectorMatches(rule.selector)
     ) ?? [];
+  const filteredWarnings =
+    conversionResult?.warnings.filter(
+      (issue) =>
+        !preservedWarningCategories.has(issue.category) &&
+        selectorMatches(issue.selector)
+    ) ?? [];
+  const reviewStatusLabels: Record<ReviewStatus, string> = {
+    all: "All",
+    converted: "Converted",
+    approximated: "Approximated",
+    unsupported: "Unsupported",
+    preserved: "Preserved",
+    warnings: "Warnings",
+  };
   const statusCounts: Record<ReviewStatus, number> = {
     all:
       filteredRules.length +
       filteredUnsupported.length +
+      filteredPreservedRules.length +
       filteredWarnings.length +
       filteredApproximated.length,
     converted: filteredConverted.length,
     approximated: filteredApproximated.length,
     unsupported: filteredUnsupported.length,
+    preserved: filteredPreservedRules.length,
     warnings: filteredWarnings.length,
   };
   const filtersActive = reviewSelector !== "all" || reviewStatus !== "all";
   const hasReviewItems =
     filteredRules.length > 0 ||
     filteredUnsupported.length > 0 ||
+    filteredPreservedRules.length > 0 ||
     filteredWarnings.length > 0 ||
     filteredApproximated.length > 0 ||
     filteredConverted.length > 0;
-  const hasIssues =
-    conversionResult
-      ? conversionResult.unsupported.length > 0 ||
-        conversionResult.warnings.length > 0 ||
-        conversionResult.approximated.length > 0
-      : false;
+  const hasIssues = conversionResult
+    ? conversionResult.unsupported.length > 0 ||
+      conversionResult.preservedRules.length > 0 ||
+      filteredWarnings.length > 0 ||
+      conversionResult.approximated.length > 0
+    : false;
   const clearReviewFilters = () => {
     setReviewSelector("all");
     setReviewStatus("all");
@@ -379,7 +409,7 @@ function App() {
                       variant={
                         conversionMode === "tokens" ? "secondary" : "ghost"
                       }
-                      className="h-9 rounded-none px-3"
+                      className="h-9 cursor-pointer rounded-none px-3"
                     >
                       Tokens
                     </Button>
@@ -388,7 +418,7 @@ function App() {
                       variant={
                         conversionMode === "exact" ? "secondary" : "ghost"
                       }
-                      className="h-9 rounded-none px-3"
+                      className="h-9 cursor-pointer rounded-none px-3"
                     >
                       Exact
                     </Button>
@@ -400,7 +430,7 @@ function App() {
                   <Button
                     onClick={() => setOutputView("html")}
                     variant={outputView === "html" ? "secondary" : "ghost"}
-                    className="h-9 rounded-none px-3"
+                    className="h-9 cursor-pointer rounded-none px-3"
                   >
                     <Code2 />
                     HTML
@@ -408,7 +438,7 @@ function App() {
                   <Button
                     onClick={() => setOutputView("review")}
                     variant={outputView === "review" ? "secondary" : "ghost"}
-                    className="h-9 rounded-none px-3"
+                    className="h-9 cursor-pointer rounded-none px-3"
                   >
                     <ClipboardList />
                     Review
@@ -416,7 +446,7 @@ function App() {
                   <Button
                     onClick={() => setOutputView("css")}
                     variant={outputView === "css" ? "secondary" : "ghost"}
-                    className="h-9 rounded-none px-3"
+                    className="h-9 cursor-pointer rounded-none px-3"
                   >
                     <FileWarning />
                     CSS
@@ -424,7 +454,7 @@ function App() {
                   <Button
                     onClick={() => setOutputView("preview")}
                     variant={outputView === "preview" ? "secondary" : "ghost"}
-                    className="h-9 rounded-none px-3"
+                    className="h-9 cursor-pointer rounded-none px-3"
                   >
                     <Eye />
                     Preview
@@ -528,6 +558,16 @@ function App() {
                               </option>
                             ))}
                           </select>
+                          <Button
+                            onClick={copyLeftoverCss}
+                            variant="outline"
+                            size="sm"
+                            disabled={!conversionResult.leftoverCss}
+                            className="cursor-pointer"
+                          >
+                            <Copy />
+                            Copy preserved CSS
+                          </Button>
                           <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
                             {(
                               [
@@ -535,6 +575,7 @@ function App() {
                                 "converted",
                                 "approximated",
                                 "unsupported",
+                                "preserved",
                                 "warnings",
                               ] as ReviewStatus[]
                             ).map((status) => (
@@ -546,9 +587,10 @@ function App() {
                                     ? "secondary"
                                     : "ghost"
                                 }
-                                className="h-9 rounded-none px-3 capitalize"
+                                className="h-9 cursor-pointer rounded-none px-3 capitalize"
                               >
-                                {status} {statusCounts[status]}
+                                {reviewStatusLabels[status]}{" "}
+                                {statusCounts[status]}
                               </Button>
                             ))}
                           </div>
@@ -576,36 +618,38 @@ function App() {
                         {(reviewStatus === "all" ||
                           reviewStatus === "converted") && (
                           <section>
-                          <h3 className="mb-2 font-medium">By Selector</h3>
-                          <div className="space-y-2">
-                            {filteredRules.map((rule, index) => (
-                              <div
-                                key={`${rule.selector}-${index}`}
-                                className="rounded border p-3"
-                              >
-                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                  <span className="font-medium">
-                                    {rule.selector}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {rule.declarations.length} classes
-                                  </span>
+                            <h3 className="mb-2 font-medium">By Selector</h3>
+                            <div className="space-y-2">
+                              {filteredRules.map((rule, index) => (
+                                <div
+                                  key={`${rule.selector}-${index}`}
+                                  className="rounded border p-3"
+                                >
+                                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                    <span className="font-medium">
+                                      {rule.selector}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {rule.declarations.length} classes
+                                    </span>
+                                  </div>
+                                  <div className="break-words font-mono text-xs text-muted-foreground">
+                                    {rule.classes || "Preserved for review"}
+                                  </div>
                                 </div>
-                                <div className="break-words font-mono text-xs text-muted-foreground">
-                                  {rule.classes || "Preserved for review"}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
+                              ))}
+                            </div>
+                          </section>
                         )}
                         {(reviewStatus === "all" ||
                           reviewStatus === "unsupported") &&
                           filteredUnsupported.length > 0 && (
-                          <section>
-                            <h3 className="mb-2 font-medium">Needs Review</h3>
-                            <div className="space-y-2 text-muted-foreground">
-                              {filteredUnsupported.map((issue, index) => (
+                            <section>
+                              <h3 className="mb-2 font-medium">
+                                Unsupported Declarations
+                              </h3>
+                              <div className="space-y-2 text-muted-foreground">
+                                {filteredUnsupported.map((issue, index) => (
                                   <p key={`unsupported-${index}`}>
                                     <span className="font-medium text-foreground">
                                       {issue.selector}
@@ -618,17 +662,49 @@ function App() {
                                       : ""}{" "}
                                     {issue.message}
                                   </p>
-                              ))}
-                            </div>
-                          </section>
-                        )}
+                                ))}
+                              </div>
+                            </section>
+                          )}
+                        {(reviewStatus === "all" ||
+                          reviewStatus === "preserved") &&
+                          filteredPreservedRules.length > 0 && (
+                            <section>
+                              <h3 className="mb-2 font-medium">
+                                Preserved Selectors
+                              </h3>
+                              <div className="space-y-3">
+                                {filteredPreservedRules.map((rule, index) => (
+                                  <div
+                                    key={`preserved-${rule.selector}-${index}`}
+                                    className="rounded border p-3"
+                                  >
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                      <span className="font-medium">
+                                        {rule.selector}
+                                      </span>
+                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                        {rule.category}
+                                      </span>
+                                    </div>
+                                    <p className="mb-2 text-muted-foreground">
+                                      {rule.message}
+                                    </p>
+                                    <pre className="overflow-auto rounded bg-muted p-3 font-mono text-xs text-muted-foreground">
+                                      <code>{rule.css}</code>
+                                    </pre>
+                                  </div>
+                                ))}
+                              </div>
+                            </section>
+                          )}
                         {(reviewStatus === "all" ||
                           reviewStatus === "warnings") &&
                           filteredWarnings.length > 0 && (
-                          <section>
-                            <h3 className="mb-2 font-medium">Warnings</h3>
-                            <div className="space-y-2 text-muted-foreground">
-                              {filteredWarnings.map((issue, index) => (
+                            <section>
+                              <h3 className="mb-2 font-medium">Warnings</h3>
+                              <div className="space-y-2 text-muted-foreground">
+                                {filteredWarnings.map((issue, index) => (
                                   <p key={`warning-${index}`}>
                                     <span className="font-medium text-foreground">
                                       {issue.selector}
@@ -638,17 +714,17 @@ function App() {
                                     </span>{" "}
                                     {issue.message}
                                   </p>
-                              ))}
-                            </div>
-                          </section>
-                        )}
+                                ))}
+                              </div>
+                            </section>
+                          )}
                         {(reviewStatus === "all" ||
                           reviewStatus === "approximated") &&
                           filteredApproximated.length > 0 && (
-                          <section>
-                            <h3 className="mb-2 font-medium">Approximated</h3>
-                            <div className="space-y-2 text-muted-foreground">
-                              {filteredApproximated.map((item, index) => (
+                            <section>
+                              <h3 className="mb-2 font-medium">Approximated</h3>
+                              <div className="space-y-2 text-muted-foreground">
+                                {filteredApproximated.map((item, index) => (
                                   <p key={`approximated-${index}`}>
                                     <span className="font-medium text-foreground">
                                       {item.selector ?? "CSS"}
@@ -658,10 +734,10 @@ function App() {
                                     </span>{" "}
                                     became {item.className}. {item.message}
                                   </p>
-                              ))}
-                            </div>
-                          </section>
-                        )}
+                                ))}
+                              </div>
+                            </section>
+                          )}
                         {reviewStatus === "converted" &&
                           filteredConverted.length > 0 && (
                             <section>
@@ -682,10 +758,10 @@ function App() {
                             </section>
                           )}
                         {!hasReviewItems && (
-                            <p className="text-muted-foreground">
-                              No review items match the current filters.
-                            </p>
-                          )}
+                          <p className="text-muted-foreground">
+                            No review items match the current filters.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -703,20 +779,20 @@ function App() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
-                          {(["split", "original", "converted"] as PreviewMode[]).map(
-                            (mode) => (
-                              <Button
-                                key={mode}
-                                onClick={() => setPreviewMode(mode)}
-                                variant={
-                                  previewMode === mode ? "secondary" : "ghost"
-                                }
-                                className="h-9 rounded-none px-3 capitalize"
-                              >
-                                {mode}
-                              </Button>
-                            )
-                          )}
+                          {(
+                            ["split", "original", "converted"] as PreviewMode[]
+                          ).map((mode) => (
+                            <Button
+                              key={mode}
+                              onClick={() => setPreviewMode(mode)}
+                              variant={
+                                previewMode === mode ? "secondary" : "ghost"
+                              }
+                              className="h-9 cursor-pointer rounded-none px-3 capitalize"
+                            >
+                              {mode}
+                            </Button>
+                          ))}
                         </div>
                         <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
                           <Button
@@ -726,7 +802,7 @@ function App() {
                                 ? "secondary"
                                 : "ghost"
                             }
-                            className="h-9 rounded-none px-3"
+                            className="h-9 cursor-pointer rounded-none px-3"
                           >
                             <Monitor />
                             Desktop
@@ -738,7 +814,7 @@ function App() {
                                 ? "secondary"
                                 : "ghost"
                             }
-                            className="h-9 rounded-none px-3"
+                            className="h-9 cursor-pointer rounded-none px-3"
                           >
                             <Tablet />
                             Tablet
@@ -750,7 +826,7 @@ function App() {
                                 ? "secondary"
                                 : "ghost"
                             }
-                            className="h-9 rounded-none px-3"
+                            className="h-9 cursor-pointer rounded-none px-3"
                           >
                             <Smartphone />
                             Mobile
@@ -802,7 +878,7 @@ function App() {
                   </div>
                 )}
               </div>
-                    </div>
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
         <Toaster

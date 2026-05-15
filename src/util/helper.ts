@@ -82,9 +82,18 @@ export type RuleConversion = {
   preserveOriginalClass: boolean;
 };
 
+export type PreservedRule = {
+  selector: string;
+  category: UnsupportedCategory;
+  message: string;
+  css: string;
+  atRules: string[];
+};
+
 export type ConversionResult = {
   html: string;
   rules: RuleConversion[];
+  preservedRules: PreservedRule[];
   converted: DeclarationConversion[];
   approximated: DeclarationConversion[];
   unsupported: ConversionIssue[];
@@ -112,10 +121,7 @@ const pseudoClassVariants: { [pseudoClass: string]: string } = {
 };
 
 const tailwindGapProperties = new Set([
-  "box-shadow",
   "filter",
-  "grid-template-columns",
-  "grid-template-rows",
   "grid-column",
   "grid-row",
 ]);
@@ -193,7 +199,7 @@ const getUnsupportedMessage = ({
   }
 
   if (normalizedProperty === "box-shadow") {
-    return "Box shadows are preserved. Tailwind shadow utilities are not mapped yet.";
+    return "This box-shadow value is preserved because it could not be mapped to a Tailwind shadow utility.";
   }
 
   if (
@@ -211,7 +217,7 @@ const getUnsupportedMessage = ({
     normalizedProperty === "grid-template-columns" ||
     normalizedProperty === "grid-template-rows"
   ) {
-    return "Grid templates are preserved. Converting this safely requires template parsing.";
+    return "This grid template is preserved because it could not be mapped to a supported Tailwind grid utility.";
   }
 
   if (normalizedProperty === "grid-column" || normalizedProperty === "grid-row") {
@@ -364,7 +370,7 @@ const appendLeftover = (
   declarations: Pick<Declaration, "prop" | "value">[],
   atRules: string[] = []
 ) => {
-  if (declarations.length === 0) return;
+  if (declarations.length === 0) return "";
 
   const body = declarations
     .map((declaration) => `  ${declaration.prop}: ${declaration.value};`)
@@ -379,6 +385,7 @@ const appendLeftover = (
   }
 
   leftovers.push(css);
+  return css;
 };
 
 const splitCssValue = (value: string) => {
@@ -772,6 +779,7 @@ export const cssToTailwindRules = (
   mode: ConversionMode = "tokens"
 ) => {
   const rules: RuleConversion[] = [];
+  const preservedRules: PreservedRule[] = [];
   const unsupported: ConversionIssue[] = [];
   const warnings: ConversionIssue[] = [];
   const leftovers: string[] = [];
@@ -788,7 +796,17 @@ export const cssToTailwindRules = (
           ? `PostCSS could not parse this stylesheet: ${error.message}`
           : "PostCSS could not parse this stylesheet.",
     });
-    return { rules, unsupported, warnings, leftoverCss: css };
+    preservedRules.push({
+      selector: "CSS",
+      category: "unsupported-value",
+      message:
+        error instanceof Error
+          ? `PostCSS could not parse this stylesheet: ${error.message}`
+          : "PostCSS could not parse this stylesheet.",
+      css,
+      atRules: [],
+    });
+    return { rules, preservedRules, unsupported, warnings, leftoverCss: css };
   }
 
   root.walkAtRules((atRule) => {
@@ -902,24 +920,49 @@ export const cssToTailwindRules = (
     splitSelectorList(rule.selector).forEach((selector) => {
       const selectorAnalysis = analyzeSelector(selector);
       const canApply = selectorAnalysis.canApply && !unsupportedAtRule;
+      const preserveCategory = unsupportedAtRule
+        ? "media-query"
+        : classifyUnsupported({
+            selector,
+            fallback: "complex-selector",
+          });
+      const preserveMessage = unsupportedAtRule
+        ? getUnsupportedMessage({
+            category: preserveCategory,
+            fallbackMessage:
+              "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
+          })
+        : selectorAnalysis.warning
+          ? getUnsupportedMessage({
+              category: preserveCategory,
+              fallbackMessage: selectorAnalysis.warning,
+            })
+          : "This rule is preserved for review.";
 
       if (selectorAnalysis.warning) {
-        const category = classifyUnsupported({
-          selector,
-          fallback: "complex-selector",
-        });
         warnings.push({
           selector,
-          category,
-          message: getUnsupportedMessage({
-            category,
-            fallbackMessage: selectorAnalysis.warning,
-          }),
+          category: preserveCategory,
+          message: preserveMessage,
         });
       }
 
       if (!canApply) {
-        appendLeftover(leftovers, selector, sourceDeclarations, ruleAtRules);
+        const css = appendLeftover(
+          leftovers,
+          selector,
+          sourceDeclarations,
+          ruleAtRules
+        );
+        if (css) {
+          preservedRules.push({
+            selector,
+            category: preserveCategory,
+            message: preserveMessage,
+            css,
+            atRules: ruleAtRules,
+          });
+        }
       } else {
         appendLeftover(leftovers, selector, unsupportedDeclarations, ruleAtRules);
       }
@@ -927,7 +970,7 @@ export const cssToTailwindRules = (
       const preserveOriginalClass =
         !canApply || unsupportedDeclarations.length > 0;
       const classNames = declarationsResult
-        .filter((item) => item.className)
+        .filter((item) => canApply && item.className)
         .map((item) => {
           const className = `${variantPrefix}${selectorAnalysis.variantPrefix}${item.className}`;
           return {
@@ -950,7 +993,13 @@ export const cssToTailwindRules = (
     });
   });
 
-  return { rules, unsupported, warnings, leftoverCss: leftovers.join("\n\n") };
+  return {
+    rules,
+    preservedRules,
+    unsupported,
+    warnings,
+    leftoverCss: leftovers.join("\n\n"),
+  };
 };
 
 export const getClosestValue = (sizes: (string | number)[], value: number) => {
@@ -1047,18 +1096,28 @@ export const convertHtmlCss = (
   css: string,
   mode: ConversionMode = "tokens"
 ): ConversionResult => {
-  const { rules, unsupported, warnings, leftoverCss } = cssToTailwindRules(
-    css,
-    mode
-  );
-  const classObjects = rules
+  const { rules, preservedRules, unsupported, warnings, leftoverCss } =
+    cssToTailwindRules(css, mode);
+  const selectorClasses = rules
     .filter((rule) => rule.canApply)
-    .map((rule) => ({
-      [rule.selector]: {
-        classes: rule.classes,
-        preserveOriginalClass: rule.preserveOriginalClass,
-      },
-    }));
+    .reduce((classesBySelector, rule) => {
+      const existing = classesBySelector.get(rule.selector);
+      const classes = [
+        ...(existing?.classes.split(" ").filter(Boolean) ?? []),
+        ...rule.classes.split(" ").filter(Boolean),
+      ];
+
+      classesBySelector.set(rule.selector, {
+        classes: Array.from(new Set(classes)).join(" "),
+        preserveOriginalClass:
+          Boolean(existing?.preserveOriginalClass) || rule.preserveOriginalClass,
+      });
+
+      return classesBySelector;
+    }, new Map<string, { classes: string; preserveOriginalClass: boolean }>());
+  const classObjects = Array.from(selectorClasses).map(([selector, value]) => ({
+    [selector]: value,
+  }));
   const convertedHtml = addLeftoverCss(parser(html, classObjects), leftoverCss);
   const convertedDeclarations = rules.flatMap((rule) => rule.declarations);
   const unsupportedDeclarations = unsupported.map((issue) => ({
@@ -1074,6 +1133,7 @@ export const convertHtmlCss = (
   return {
     html: convertedHtml,
     rules,
+    preservedRules,
     converted: declarations.filter((item) => item.status === "converted"),
     approximated: declarations.filter((item) => item.status === "approximated"),
     unsupported,

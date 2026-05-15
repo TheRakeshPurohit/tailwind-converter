@@ -71,9 +71,9 @@ Common limitations include:
 
 - complex selectors such as `.card > h2`
 - pseudo-elements such as `::before` and `::after`
-- box shadows and drop shadows
+- drop shadows
 - ring, divide, and space utilities
-- complex grid templates and placement
+- complex grid placement and advanced grid templates
 - background images and gradients
 - animation and keyframes
 - CSS variables as Tailwind theme tokens
@@ -107,5 +107,5 @@ Useful next milestones:
 
 - Improve scriptless converted preview rendering.
 - Add more unsupported-property classification.
-- Expand support for shadows, transitions, and grid templates.
+- Expand support for transitions, grid placement, advanced grid templates, and drop shadows.
 - Add relationship-aware conversions for `space-*` and `divide-*`.
