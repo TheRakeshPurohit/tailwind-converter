@@ -1,204 +1,165 @@
-## Supported Tailwind Classes: 133/156
+# Supported CSS Conversion
 
-#### Note: remaining classes will likely not be supported due to complexity and/or lack of use
+Tailwind Converter is a migration helper, not a lossless CSS compiler. It converts safe CSS declarations to Tailwind classes, approximates values to Tailwind's design scale in token mode, and preserves risky or unsupported CSS in a leftover `<style>` block for review.
 
-### Layout 19/20
+## Conversion Modes
 
-- [x] Aspect Ratio
-- [ ] Container
-- [x] Columns
-- [x] Break After
-- [x] Break Before
-- [x] Break Inside
-- [x] Box Decoration Break
-- [x] Box Sizing
-- [x] Display
-- [x] Floats
-- [x] Clear
-- [x] Isolation
-- [x] Object Fit
-- [x] Object Position
-- [x] Overflow
-- [x] Overscroll Behavior
-- [x] Position
-- [x] Top/Right/Bottom/Left
-- [x] Visibility
-- [x] Z-Index
+- **Tokens mode** maps values to the closest Tailwind design token. Example: `margin: 17px` becomes `m-4`.
+- **Exact mode** uses Tailwind arbitrary values when possible. Example: `margin: 17px` becomes `m-[17px]`.
 
-### Flexbox & Grid 20/24
+The Review panel shows what was converted, approximated, unsupported, or preserved.
 
-- [x] Flex Basis
-- [x] Flex Direction
-- [x] Flex Wrap
-- [x] Flex
-- [x] Flex Grow
-- [x] Flex Shrink
-- [x] Order
-- [ ] Grid Template Columns
-- [ ] Grid Column Start/End
-- [ ] Grid Template Rows
-- [ ] Grid Rows Start/End
-- [x] Grid Auto Flow
-- [x] Grid Auto Columns
-- [x] Grid Auto Rows
-- [x] Gap
-- [x] Justify Content
-- [x] Justify Items
-- [x] Justify Self
-- [x] Align Content
-- [x] Align Items
-- [x] Align Self
-- [x] Place Content
-- [x] Place Items
-- [x] Place Self
+## Selector Support
 
-### Spacing 2/3
+### Converted directly
 
-- [x] Padding
-- [x] Margin
-- [ ] Space Between
+- Tag selectors: `body`, `h1`, `p`
+- Single class selectors: `.card`, `.button`
+- Safe comma selector lists: `h1, h2`, `.card, .panel`
 
-### Sizing 6/6
+### Converted to Tailwind variants
 
-- [x] Width
-- [x] Min-Width
-- [x] Max-Width
-- [x] Height
-- [x] Min-Height
-- [x] Max-Height
+- `:hover`
+- `:focus`
+- `:active`
+- `:visited`
+- `:disabled`
+- `:checked`
+- `:focus-visible`
+- `:focus-within`
+- `:required`
+- `:invalid`
+- `:valid`
+- `:enabled`
+- `:first-child`
+- `:last-child`
+- `:nth-child(odd)`
+- `:nth-child(even)`
 
-### Typography 24/24
+Example:
 
-- [x] Font Family
-- [x] Font Size
-- [x] Font Smoothing
-- [x] Font Style
-- [x] Font Weight
-- [x] Font Variant Numeric
-- [x] Letter Spacing
-- [x] Line Height
-- [x] List Style Type
-- [x] List Style Position
-- [x] Text Align
-- [x] Text Color
-- [x] Text Decoration
-- [x] Text Decoration Color
-- [x] Text Decoration Style
-- [x] Text Decoration Thickness
-- [x] Text Underline Offset
-- [x] Text Transform
-- [x] Text Overflow
-- [x] Text Indent
-- [x] Vertical Align
-- [x] Whitespace
-- [x] Word Break
-- [x] Content
+```css
+.button:hover {
+  color: red;
+}
+```
 
-### Backgrounds 7/9
+becomes:
 
-- [x] Background Attachment
-- [x] Background Clip
-- [x] Background Color
-- [x] Background Origin
-- [x] Background Position
-- [x] Background Repeat
-- [x] Background Size
-- [ ] Background Image
-- [ ] Gradient Color Stops
+```html
+class="hover:text-red-600"
+```
 
-### Borders 8/15
+### Preserved for review
 
-- [x] Border Radius
-- [x] Border Width
-- [x] Border Color
-- [x] Border Style
-- [ ] Divide Width
-- [ ] Divide Color
-- [ ] Divide Style
-- [x] Outline Width
-- [x] Outline Color
-- [x] Outline Style (partial)
-- [x] Outline Offset
-- [ ] Ring Width
-- [ ] Ring Color
-- [ ] Ring Offset Width
-- [ ] Ring Offset Color
+- Descendant and child selectors: `.card h2`, `.card > h2`
+- Attribute selectors: `[data-state="open"]`
+- Pseudo-elements: `::before`, `::after`
+- Complex selector chains
+- Unsupported or custom at-rules
 
-### Effects 3/5
+## Responsive Media Queries
 
-- [ ] Box Shadow
-- [ ] Box Shadow Color
-- [x] Opacity
-- [x] Mix Blend Mode
-- [x] Background Blend Mode
+The following media queries become Tailwind responsive prefixes:
 
-### Filters 17/18
+| CSS media query | Tailwind prefix |
+| --- | --- |
+| `@media (min-width: 640px)` or `40rem` | `sm:` |
+| `@media (min-width: 768px)` or `48rem` | `md:` |
+| `@media (min-width: 1024px)` or `64rem` | `lg:` |
+| `@media (min-width: 1280px)` or `80rem` | `xl:` |
+| `@media (min-width: 1536px)` or `96rem` | `2xl:` |
 
-- [x] Blur
-- [x] Brightness
-- [x] Contrast
-- [ ] Drop Shadow
-- [x] Grayscale
-- [x] Hue Rotate
-- [x] Invert
-- [x] Saturate
-- [x] Sepia
-- [x] Backdrop Blur
-- [x] Backdrop Brightness
-- [x] Backdrop Contrast
-- [x] Backdrop Grayscale
-- [x] Backdrop Hue Rotate
-- [x] Backdrop Invert
-- [x] Backdrop Opacity
-- [x] Backdrop Saturate
-- [x] Backdrop Sepia
+Other media queries are preserved for review.
 
-### Tables 2/3
+## Supported Shorthands
 
-- [x] Border Collapse
-- [ ] Border Spacing
-- [x] Table Layout
+- `margin`
+- `padding`
+- `border`
+- `border-top`
+- `border-right`
+- `border-bottom`
+- `border-left`
+- `border-color`
+- `background` when it is a color-only shorthand
+- `font` for conservative size/style/weight/line-height/family cases
 
-### Transitions & Animation 2/5
+Examples:
 
-- [ ] Transition Property
-- [x] Transition Duration
-- [ ] Transition Timing Function
-- [x] Transition Delay
-- [ ] Animation
+```css
+padding: 8px 16px;
+border: 1px solid red;
+font: italic 700 16px/1.5 sans-serif;
+```
 
-### Transforms 5/5
+can become:
 
-- [x] Scale
-- [x] Rotate
-- [x] Translate
-- [x] Skew
-- [x] Transform Origin
+```html
+class="pt-2 pr-4 pb-2 pl-4 border border-solid border-red-600 italic font-bold text-base leading-normal font-sans"
+```
 
-### Interactivity 15/15
+Compound background shorthands such as `background: url(...) center / cover no-repeat` are preserved for review.
 
-- [x] Accent Color
-- [x] Appearance
-- [x] Cursor
-- [x] Caret Color
-- [x] Pointer Events
-- [x] Resize
-- [x] Scroll Behavior
-- [x] Scroll Margin
-- [x] Scroll Padding
-- [x] Scroll Snap Align
-- [x] Scroll Snap Stop
-- [x] Scroll Snap Type (partial)
-- [x] Touch Action
-- [x] User Select
-- [x] Will Change
+## Property Families
 
-### SVG 3/3
+### Generally supported
 
-- [x] Fill
-- [x] Stroke
-- [x] Stroke Width
+- **Layout:** display, position, top/right/bottom/left, z-index, box sizing, overflow, object fit, object position, visibility, float, clear, isolation, columns
+- **Flexbox and grid basics:** flex direction, flex wrap, flex grow, flex shrink, flex basis, order, gap, row gap, column gap, justify, align, place, grid auto flow, grid auto columns, grid auto rows
+- **Spacing:** margin, padding, gap, scroll margin, scroll padding
+- **Sizing:** width, height, min/max width, min/max height
+- **Typography:** font family, font size, font style, font weight, line height, letter spacing, text align, text color, text decoration, text transform, text overflow, text indent, vertical align, whitespace, word break, list style
+- **Backgrounds:** background color, attachment, clip, origin, position, repeat, size
+- **Borders and outlines:** border width, border color, border style, border radius, outline width, outline color, outline style, outline offset
+- **Effects:** opacity, mix blend mode, background blend mode
+- **Filters:** blur, brightness, contrast, grayscale, hue rotate, invert, saturate, sepia, and backdrop equivalents
+- **Transforms:** scale, rotate, translate, skew, transform origin
+- **Interactivity:** cursor, appearance, accent color, caret color, pointer events, resize, scroll behavior, scroll snap, touch action, user select, will change
+- **SVG:** fill, stroke, stroke width
 
-### Accessibility 0/1
+### Not currently converted
 
-- [ ] Screen Readers
+- Container queries
+- CSS variables as Tailwind theme tokens
+- Complex grid templates and grid line placement
+- Space-between utilities from sibling relationships
+- Divide and ring utilities
+- Box shadow and drop shadow
+- Background images and gradients
+- Transition property and timing function
+- Animation
+- Border spacing
+- Screen reader utilities
+- Arbitrary selector relationships that require changing HTML structure
+
+Unsupported declarations are preserved in leftover CSS when possible.
+
+## Tailwind Utility Families Not Yet Covered
+
+Some Tailwind utility families are not generated because their underlying CSS is unsupported, relationship-based, or implemented by Tailwind-specific variables rather than a direct CSS declaration.
+
+| Tailwind utility family | Related CSS | Current status |
+| --- | --- | --- |
+| `shadow-*` | `box-shadow` | Preserved for review |
+| `drop-shadow-*` | `filter: drop-shadow(...)` | Preserved for review |
+| `ring-*`, `ring-offset-*` | Tailwind ring variables and `box-shadow` | Not converted |
+| `divide-*` | Child/sibling border selectors | Not converted |
+| `space-x-*`, `space-y-*` | Child/sibling margin selectors | Not converted |
+| `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Mostly not converted |
+| `col-span-*`, `row-span-*`, `col-start-*`, `row-start-*` | `grid-column`, `grid-row` | Mostly not converted |
+| Gradient utilities such as `from-*`, `via-*`, `to-*` | `background-image`, gradient stops | Not converted |
+| `animate-*` | `animation`, `@keyframes` | Not converted |
+| `transition-*`, `ease-*` | `transition-property`, `transition-timing-function` | Partial: duration and delay are supported |
+| `container` and container query utilities | Container sizing/query behavior | Not converted |
+| `sr-only`, `not-sr-only` | Compound accessibility declarations | Not converted |
+| `before:*`, `after:*` | `::before`, `::after`, `content` | Pseudo-elements are preserved for review |
+
+These gaps are good candidates for future focused milestones. Relationship-based utilities such as `space-*` and `divide-*` will likely need HTML structure analysis, not just declaration conversion.
+
+## Important Notes
+
+- Color conversion uses nearest Tailwind color matching, so named colors may map to a nearby shade such as `red` to `red-600`.
+- Token mode prioritizes clean Tailwind classes over exact visual fidelity.
+- Exact mode prioritizes fidelity by using arbitrary values where the converter knows the matching utility prefix.
+- The Preview tab is for visual comparison. User-provided preview HTML is sanitized and scripts are stripped.

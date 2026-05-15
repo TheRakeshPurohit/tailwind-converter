@@ -34,12 +34,110 @@ import { colorCodes } from "./colors";
 // @ts-expect-error no types
 import NearestColor from "nearest-color";
 
-export const convertAttributes = (attributes: { [index: string]: string }) => {
-  const result = [];
+export type ConversionMode = "tokens" | "exact";
+
+export type DeclarationStatus = "converted" | "approximated" | "unsupported";
+
+export type DeclarationConversion = {
+  selector?: string;
+  property: string;
+  value: string;
+  className: string;
+  status: DeclarationStatus;
+  message?: string;
+};
+
+type ConversionOptions = {
+  mode?: ConversionMode;
+};
+
+const spacingPrefixes: { [index: string]: string } = {
+  margin: "m",
+  "margin-top": "mt",
+  "margin-right": "mr",
+  "margin-bottom": "mb",
+  "margin-left": "ml",
+  padding: "p",
+  "padding-top": "pt",
+  "padding-right": "pr",
+  "padding-bottom": "pb",
+  "padding-left": "pl",
+  width: "w",
+  height: "h",
+  gap: "gap",
+  "column-gap": "gap-x",
+  "row-gap": "gap-y",
+  top: "top",
+  right: "right",
+  bottom: "bottom",
+  left: "left",
+  "flex-basis": "basis",
+  "max-height": "max-h"
+};
+
+const colorPrefixes: { [index: string]: string } = {
+  color: "text",
+  "background-color": "bg",
+  "border-color": "border",
+  "text-decoration-color": "decoration",
+  "outline-color": "outline",
+  "accent-color": "accent",
+  "caret-color": "caret",
+  fill: "fill",
+  stroke: "stroke"
+};
+
+const arbitraryValue = (value: string) =>
+  value.trim().replace(/\s+/g, "_").replace(/,/g, "\\,");
+
+const splitCssValue = (value: string) => value.trim().split(/\s+/).filter(Boolean);
+
+const exactClassFor = (property: string, value: string) => {
+  if (spacingPrefixes[property]) {
+    return `${spacingPrefixes[property]}-[${arbitraryValue(value)}]`;
+  }
+  if (property === "font-size") return `text-[${arbitraryValue(value)}]`;
+  if (property === "line-height") return `leading-[${arbitraryValue(value)}]`;
+  if (property === "letter-spacing") {
+    return `tracking-[${arbitraryValue(value)}]`;
+  }
+  if (property === "text-indent") return `indent-[${arbitraryValue(value)}]`;
+  if (property === "border-radius") {
+    return `rounded-[${arbitraryValue(value)}]`;
+  }
+  if (property.includes("border") && property.includes("width")) {
+    let prefix = "border";
+    if (property.includes("top")) prefix += "-t";
+    if (property.includes("bottom")) prefix += "-b";
+    if (property.includes("left")) prefix += "-l";
+    if (property.includes("right")) prefix += "-r";
+    return `${prefix}-[${arbitraryValue(value)}]`;
+  }
+  if (colorPrefixes[property]) {
+    return `${colorPrefixes[property]}-[${arbitraryValue(value)}]`;
+  }
+  if (property === "opacity") return `opacity-[${arbitraryValue(value)}]`;
+  if (property === "z-index") return `z-[${arbitraryValue(value)}]`;
+  if (property === "transition-duration") {
+    return `duration-[${arbitraryValue(value)}]`;
+  }
+  if (property === "transition-delay") {
+    return `delay-[${arbitraryValue(value)}]`;
+  }
+  return "";
+};
+
+export const convertAttributesDetailed = (
+  attributes: { [index: string]: string },
+  options: ConversionOptions = {}
+) => {
+  const mode = options.mode ?? "tokens";
+  const result: DeclarationConversion[] = [];
   let style: string;
   for (style in attributes) {
     let negativeValue: boolean = false;
     let styleValue: string = attributes[style];
+    const originalValue = String(styleValue);
     let styleNumber: number;
     // TODO Refactor this bc there can be multiple filters
     if (Array.isArray(styleValue)) styleValue = styleValue[0];
@@ -205,6 +303,7 @@ export const convertAttributes = (attributes: { [index: string]: string }) => {
         else if (styleValue === "currentcolor") tailwindValue = "current";
         else if (styleValue === "transparent") tailwindValue = "transparent";
         else if (styleValue === "none") tailwindValue = "none";
+        else if (styleValue.includes("var(")) tailwindValue = "";
         else {
           //only hex #ff0000 and rgb values rgb(255, 0, 0) are currently supported
           tailwindValue = NearestColor.from(colorCodes)(styleValue).name;
@@ -342,6 +441,17 @@ export const convertAttributes = (attributes: { [index: string]: string }) => {
         abbreviation = "";
       }
     } else if (style === "border-radius") {
+      if (mode !== "exact" && splitCssValue(styleValue).length > 1) {
+        result.push({
+          property: style,
+          value: originalValue,
+          className: "",
+          status: "unsupported",
+          message:
+            "Multi-value border-radius needs exact mode or manual review."
+        });
+        continue;
+      }
       if (validValue(styleValue)) {
         abbreviation = "rounded";
         if (styleValue.includes("px")) {
@@ -433,10 +543,40 @@ export const convertAttributes = (attributes: { [index: string]: string }) => {
     }
     if (tailwindValue !== "") {
       if (negativeValue) abbreviation = "-" + abbreviation;
-      result.push(
-        abbreviation ? (abbreviation += "-" + tailwindValue) : tailwindValue
-      );
+      const className = abbreviation
+        ? (abbreviation += "-" + tailwindValue)
+        : String(tailwindValue);
+      const exactClass = exactClassFor(style, originalValue);
+      const shouldUseExact = mode === "exact" && exactClass;
+      const status = shouldUseExact || !exactClass ? "converted" : "approximated";
+      result.push({
+        property: style,
+        value: originalValue,
+        className: shouldUseExact ? exactClass : className,
+        status,
+        message:
+          status === "approximated"
+            ? "Mapped to the nearest Tailwind design token."
+            : undefined
+      });
+    } else {
+      const exactClass = mode === "exact" ? exactClassFor(style, originalValue) : "";
+      result.push({
+        property: style,
+        value: originalValue,
+        className: exactClass,
+        status: exactClass ? "converted" : "unsupported",
+        message: exactClass
+          ? undefined
+          : "No Tailwind utility mapping exists yet for this declaration."
+      });
     }
   }
   return result;
+};
+
+export const convertAttributes = (attributes: { [index: string]: string }) => {
+  return convertAttributesDetailed(attributes)
+    .filter((item) => item.className)
+    .map((item) => item.className);
 };

@@ -1,5 +1,11 @@
-import { convertAttributes } from "./converter";
+import {
+  ConversionMode,
+  DeclarationConversion,
+  convertAttributes,
+  convertAttributesDetailed,
+} from "./converter";
 import DOMPurify from "dompurify";
+import postcss, { AtRule, Declaration, Rule } from "postcss";
 
 export const initialHTML = `<html lang="en">
 <body>
@@ -33,6 +39,688 @@ type CSSProperties = {
 
 type CSSJson = {
   [selector: string]: CSSProperties;
+};
+
+type SelectorAnalysis = {
+  originalSelector: string;
+  applySelector: string;
+  variantPrefix: string;
+  canApply: boolean;
+  warning?: string;
+};
+
+type NormalizedDeclarations = {
+  style: CSSProperties;
+  preservedDeclarations: Declaration[];
+};
+
+export type UnsupportedCategory =
+  | "unsupported-property"
+  | "unsupported-value"
+  | "complex-selector"
+  | "relationship-based"
+  | "pseudo-element"
+  | "media-query"
+  | "css-variable"
+  | "compound-shorthand"
+  | "tailwind-gap";
+
+export type ConversionIssue = {
+  selector: string;
+  property?: string;
+  value?: string;
+  category: UnsupportedCategory;
+  message: string;
+};
+
+export type RuleConversion = {
+  selector: string;
+  classes: string;
+  declarations: DeclarationConversion[];
+  atRules: string[];
+  canApply: boolean;
+  preserveOriginalClass: boolean;
+};
+
+export type ConversionResult = {
+  html: string;
+  rules: RuleConversion[];
+  converted: DeclarationConversion[];
+  approximated: DeclarationConversion[];
+  unsupported: ConversionIssue[];
+  warnings: ConversionIssue[];
+  leftoverCss: string;
+};
+
+const simpleSelectorPattern = String.raw`(?:\.[_a-zA-Z][\w-]*|[a-zA-Z][\w-]*)`;
+
+const pseudoClassVariants: { [pseudoClass: string]: string } = {
+  hover: "hover",
+  focus: "focus",
+  active: "active",
+  visited: "visited",
+  disabled: "disabled",
+  checked: "checked",
+  "focus-visible": "focus-visible",
+  "focus-within": "focus-within",
+  required: "required",
+  invalid: "invalid",
+  valid: "valid",
+  enabled: "enabled",
+  "first-child": "first",
+  "last-child": "last",
+};
+
+const tailwindGapProperties = new Set([
+  "box-shadow",
+  "filter",
+  "grid-template-columns",
+  "grid-template-rows",
+  "grid-column",
+  "grid-row",
+]);
+
+const unsupportedProperties = new Set([
+  "animation",
+  "background-image",
+  "border-spacing",
+  "transition-property",
+  "transition-timing-function",
+]);
+
+const classifyUnsupported = ({
+  selector,
+  property,
+  value,
+  fallback = "unsupported-property",
+}: {
+  selector: string;
+  property?: string;
+  value?: string;
+  fallback?: UnsupportedCategory;
+}): UnsupportedCategory => {
+  const normalizedProperty = property?.toLowerCase();
+  const normalizedValue = value?.toLowerCase() ?? "";
+
+  if (selector.includes("::")) return "pseudo-element";
+  if (/\s|>|\+|~/.test(selector.trim())) return "relationship-based";
+  if (normalizedValue.includes("var(")) return "css-variable";
+  if (normalizedProperty && tailwindGapProperties.has(normalizedProperty)) {
+    return "tailwind-gap";
+  }
+  if (normalizedProperty && unsupportedProperties.has(normalizedProperty)) {
+    return "unsupported-property";
+  }
+  if (
+    normalizedProperty === "background" ||
+    normalizedProperty === "font" ||
+    normalizedProperty?.startsWith("border")
+  ) {
+    return "compound-shorthand";
+  }
+
+  return fallback;
+};
+
+const getUnsupportedMessage = ({
+  property,
+  value,
+  category,
+  fallbackMessage,
+}: {
+  property?: string;
+  value?: string;
+  category: UnsupportedCategory;
+  fallbackMessage: string;
+}) => {
+  const normalizedProperty = property?.toLowerCase();
+  const normalizedValue = value?.toLowerCase() ?? "";
+
+  if (category === "css-variable") {
+    return "CSS variable values are preserved. Tailwind theme token mapping is not implemented yet.";
+  }
+
+  if (category === "relationship-based") {
+    return "This selector targets related elements. Converting it safely would require changing HTML structure.";
+  }
+
+  if (category === "pseudo-element") {
+    return "Pseudo-elements are preserved because generated elements cannot be represented as classes on the original element.";
+  }
+
+  if (category === "media-query") {
+    return "This at-rule is preserved because it does not match a default Tailwind responsive breakpoint.";
+  }
+
+  if (normalizedProperty === "box-shadow") {
+    return "Box shadows are preserved. Tailwind shadow utilities are not mapped yet.";
+  }
+
+  if (
+    normalizedProperty === "background-image" ||
+    normalizedValue.includes("gradient(")
+  ) {
+    return "Background images and gradients are preserved. URL and gradient parsing is not implemented yet.";
+  }
+
+  if (normalizedProperty === "animation") {
+    return "Animations are preserved. animation and @keyframes conversion is not implemented yet.";
+  }
+
+  if (
+    normalizedProperty === "grid-template-columns" ||
+    normalizedProperty === "grid-template-rows"
+  ) {
+    return "Grid templates are preserved. Converting this safely requires template parsing.";
+  }
+
+  if (normalizedProperty === "grid-column" || normalizedProperty === "grid-row") {
+    return "Grid placement is preserved. Mapping spans and line numbers to Tailwind is not implemented yet.";
+  }
+
+  if (normalizedProperty === "transition-property") {
+    return "Transition properties are preserved. Tailwind transition-property mapping is not implemented yet.";
+  }
+
+  if (normalizedProperty === "transition-timing-function") {
+    return "Transition timing functions are preserved. Tailwind easing mapping is not implemented yet.";
+  }
+
+  if (category === "compound-shorthand") {
+    return "This shorthand is preserved because some parts could not be safely expanded.";
+  }
+
+  if (category === "tailwind-gap") {
+    return "This CSS maps to a Tailwind utility family that is not supported yet.";
+  }
+
+  return fallbackMessage;
+};
+
+const splitSelectorList = (selector: string) => {
+  const selectors: string[] = [];
+  let current = "";
+  let bracketDepth = 0;
+  let parenDepth = 0;
+  let quote: string | null = null;
+
+  for (const character of selector) {
+    if (quote) {
+      current += character;
+      if (character === quote) quote = null;
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      current += character;
+      continue;
+    }
+
+    if (character === "[") bracketDepth += 1;
+    if (character === "]") bracketDepth -= 1;
+    if (character === "(") parenDepth += 1;
+    if (character === ")") parenDepth -= 1;
+
+    if (character === "," && bracketDepth === 0 && parenDepth === 0) {
+      selectors.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+
+  if (current.trim()) selectors.push(current.trim());
+  return selectors;
+};
+
+const analyzeSelector = (selector: string): SelectorAnalysis => {
+  const simpleSelector = new RegExp(`^${simpleSelectorPattern}$`);
+  if (simpleSelector.test(selector)) {
+    return {
+      originalSelector: selector,
+      applySelector: selector,
+      variantPrefix: "",
+      canApply: true,
+    };
+  }
+
+  const pseudoClassSelector = new RegExp(
+    `^(${simpleSelectorPattern}):([a-z-]+)$`
+  );
+  const pseudoClassMatch = selector.match(pseudoClassSelector);
+  if (pseudoClassMatch) {
+    const [, applySelector, pseudoClass] = pseudoClassMatch;
+    const variant = pseudoClassVariants[pseudoClass];
+    if (variant) {
+      return {
+        originalSelector: selector,
+        applySelector,
+        variantPrefix: `${variant}:`,
+        canApply: true,
+      };
+    }
+  }
+
+  const nthChildSelector = new RegExp(
+    `^(${simpleSelectorPattern}):nth-child\\((odd|even)\\)$`
+  );
+  const nthChildMatch = selector.match(nthChildSelector);
+  if (nthChildMatch) {
+    const [, applySelector, variant] = nthChildMatch;
+    return {
+      originalSelector: selector,
+      applySelector,
+      variantPrefix: `${variant}:`,
+      canApply: true,
+    };
+  }
+
+  return {
+    originalSelector: selector,
+    applySelector: selector,
+    variantPrefix: "",
+    canApply: false,
+    warning:
+      "Complex selectors are reported for review because moving them inline can change behavior.",
+  };
+};
+
+const breakpointPrefixes: { [query: string]: string } = {
+  "(min-width: 640px)": "sm",
+  "(min-width: 40rem)": "sm",
+  "(min-width: 768px)": "md",
+  "(min-width: 48rem)": "md",
+  "(min-width: 1024px)": "lg",
+  "(min-width: 64rem)": "lg",
+  "(min-width: 1280px)": "xl",
+  "(min-width: 80rem)": "xl",
+  "(min-width: 1536px)": "2xl",
+  "(min-width: 96rem)": "2xl",
+};
+
+const atRuleToString = (atRule: AtRule) =>
+  atRule.params ? `@${atRule.name} ${atRule.params}` : `@${atRule.name}`;
+
+const classPrefixForAtRules = (atRules: string[]) => {
+  const prefixes: string[] = [];
+
+  for (const atRule of atRules) {
+    const normalized = atRule.replace(/\s+/g, " ").trim();
+    if (!normalized.startsWith("@media ")) return "";
+
+    const query = normalized.replace("@media ", "");
+    const prefix = breakpointPrefixes[query];
+    if (!prefix) return "";
+    prefixes.push(prefix);
+  }
+
+  return prefixes.length > 0 ? `${prefixes.join(":")}:` : "";
+};
+
+const appendLeftover = (
+  leftovers: string[],
+  selector: string,
+  declarations: Pick<Declaration, "prop" | "value">[],
+  atRules: string[] = []
+) => {
+  if (declarations.length === 0) return;
+
+  const body = declarations
+    .map((declaration) => `  ${declaration.prop}: ${declaration.value};`)
+    .join("\n");
+  let css = `${selector} {\n${body}\n}`;
+
+  for (const atRule of atRules.slice().reverse()) {
+    css = `${atRule} {\n${css
+      .split("\n")
+      .map((line) => `  ${line}`)
+      .join("\n")}\n}`;
+  }
+
+  leftovers.push(css);
+};
+
+const splitCssValue = (value: string) => {
+  const parts: string[] = [];
+  let current = "";
+  let parenDepth = 0;
+  let quote: string | null = null;
+
+  for (const character of value.trim()) {
+    if (quote) {
+      current += character;
+      if (character === quote) quote = null;
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      current += character;
+      continue;
+    }
+
+    if (character === "(") parenDepth += 1;
+    if (character === ")") parenDepth -= 1;
+
+    if (/\s/.test(character) && parenDepth === 0) {
+      if (current) {
+        parts.push(current);
+        current = "";
+      }
+    } else {
+      current += character;
+    }
+  }
+
+  if (current) parts.push(current);
+  return parts;
+};
+
+const expandBoxShorthand = (property: "margin" | "padding", value: string) => {
+  const values = splitCssValue(value);
+  if (values.length < 1 || values.length > 4) return null;
+  if (values.length === 1) {
+    return {
+      [property]: values[0],
+    };
+  }
+
+  const [top, right = top, bottom = top, left = right] = values;
+  return {
+    [`${property}-top`]: top,
+    [`${property}-right`]: right,
+    [`${property}-bottom`]: bottom,
+    [`${property}-left`]: left,
+  };
+};
+
+const borderStyles = new Set([
+  "solid",
+  "dashed",
+  "dotted",
+  "double",
+  "hidden",
+  "none",
+]);
+
+const borderWidthKeywords: { [keyword: string]: string } = {
+  thin: "1px",
+  medium: "2px",
+  thick: "4px",
+};
+
+const borderSides: { [property: string]: string } = {
+  border: "border",
+  "border-top": "border-top",
+  "border-right": "border-right",
+  "border-bottom": "border-bottom",
+  "border-left": "border-left",
+};
+
+const colorKeywords = new Set([
+  "transparent",
+  "currentcolor",
+  "currentColor",
+  "inherit",
+  "black",
+  "white",
+  "red",
+  "blue",
+  "green",
+  "yellow",
+  "orange",
+  "purple",
+  "pink",
+  "gray",
+  "grey",
+  "slate",
+  "zinc",
+  "neutral",
+  "stone",
+  "cyan",
+  "teal",
+  "emerald",
+  "lime",
+  "amber",
+  "indigo",
+  "violet",
+  "fuchsia",
+  "rose",
+  "sky",
+]);
+
+const isLengthValue = (value: string) =>
+  value === "0" ||
+  /^-?\d*\.?\d+(px|rem|em|%)$/.test(value) ||
+  borderWidthKeywords[value] !== undefined;
+
+const isColorValue = (value: string) =>
+  value.startsWith("#") ||
+  /^rgba?\(/i.test(value) ||
+  /^hsla?\(/i.test(value) ||
+  colorKeywords.has(value);
+
+const expandBorderShorthand = (property: string, value: string) => {
+  const borderProperty = borderSides[property];
+  if (!borderProperty) return null;
+
+  const values = splitCssValue(value);
+  if (values.length === 0) return null;
+
+  const expanded: CSSProperties = {};
+  const unknownValues: string[] = [];
+
+  values.forEach((part) => {
+    const normalizedPart = part.toLowerCase();
+    if (isLengthValue(normalizedPart)) {
+      expanded[`${borderProperty}-width`] =
+        borderWidthKeywords[normalizedPart] ?? part;
+    } else if (borderStyles.has(normalizedPart)) {
+      expanded["border-style"] = normalizedPart;
+    } else if (isColorValue(part) || isColorValue(normalizedPart)) {
+      expanded[`${borderProperty}-color`] = part;
+    } else {
+      unknownValues.push(part);
+    }
+  });
+
+  return {
+    expanded,
+    canConvert: Object.keys(expanded).length > 0 && unknownValues.length === 0,
+  };
+};
+
+const expandBorderColorShorthand = (value: string) => {
+  const values = splitCssValue(value);
+  if (values.length < 1 || values.length > 4) return null;
+  if (!values.every((part) => isColorValue(part) || isColorValue(part.toLowerCase()))) {
+    return null;
+  }
+
+  if (values.length === 1) {
+    return {
+      "border-color": values[0],
+    };
+  }
+
+  const [top, right = top, bottom = top, left = right] = values;
+  return {
+    "border-top-color": top,
+    "border-right-color": right,
+    "border-bottom-color": bottom,
+    "border-left-color": left,
+  };
+};
+
+const expandBackgroundShorthand = (value: string) => {
+  const values = splitCssValue(value);
+  if (values.length === 1 && (isColorValue(values[0]) || isColorValue(values[0].toLowerCase()))) {
+    return {
+      "background-color": values[0],
+    };
+  }
+
+  return null;
+};
+
+const fontStyleValues = new Set(["normal", "italic", "oblique"]);
+const fontWeightValues = new Set([
+  "normal",
+  "bold",
+  "bolder",
+  "lighter",
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+]);
+const fontVariantValues = new Set(["small-caps"]);
+const systemFontValues = new Set([
+  "caption",
+  "icon",
+  "menu",
+  "message-box",
+  "small-caption",
+  "status-bar",
+]);
+
+const isFontSizeValue = (value: string) =>
+  /^(xx-small|x-small|small|medium|large|x-large|xx-large|larger|smaller)$/.test(
+    value
+  ) || /^\d*\.?\d+(px|rem|em|%)?(\/.+)?$/.test(value);
+
+const isConvertibleFontSizeValue = (value: string) =>
+  /^\d*\.?\d+(px|rem)(\/.+)?$/.test(value);
+
+const normalizeFontWeight = (value: string) => {
+  if (value === "normal") return "400";
+  if (value === "bold") return "700";
+  return /^\d+$/.test(value) ? value : "";
+};
+
+const expandFontShorthand = (value: string) => {
+  const values = splitCssValue(value);
+  if (values.length === 1 && systemFontValues.has(values[0].toLowerCase())) {
+    return null;
+  }
+
+  const expanded: CSSProperties = {};
+  let fontSizeIndex = -1;
+
+  for (let index = 0; index < values.length; index += 1) {
+    const part = values[index];
+    const normalizedPart = part.toLowerCase();
+
+    if (fontStyleValues.has(normalizedPart)) {
+      if (normalizedPart !== "normal") expanded["font-style"] = normalizedPart;
+      continue;
+    }
+
+    if (fontWeightValues.has(normalizedPart)) {
+      const fontWeight = normalizeFontWeight(normalizedPart);
+      if (fontWeight) expanded["font-weight"] = fontWeight;
+      continue;
+    }
+
+    if (fontVariantValues.has(normalizedPart)) {
+      continue;
+    }
+
+    if (isFontSizeValue(normalizedPart)) {
+      if (!isConvertibleFontSizeValue(normalizedPart)) return null;
+      fontSizeIndex = index;
+      const [fontSize, lineHeight] = part.split("/");
+      expanded["font-size"] = fontSize;
+      if (lineHeight) expanded["line-height"] = lineHeight;
+      break;
+    }
+
+    return null;
+  }
+
+  if (fontSizeIndex === -1 || fontSizeIndex === values.length - 1) return null;
+
+  expanded["font-family"] = values.slice(fontSizeIndex + 1).join(" ");
+  return expanded;
+};
+
+const normalizeDeclarations = (
+  declarations: Declaration[]
+): NormalizedDeclarations => {
+  const style: CSSProperties = {};
+  const preservedDeclarations: Declaration[] = [];
+
+  declarations.forEach((declaration) => {
+    if (declaration.prop === "margin" || declaration.prop === "padding") {
+      const expanded = expandBoxShorthand(
+        declaration.prop,
+        declaration.value
+      );
+
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    const expandedBorder = expandBorderShorthand(
+      declaration.prop,
+      declaration.value
+    );
+    if (expandedBorder) {
+      Object.assign(style, expandedBorder.expanded);
+      if (!expandedBorder.canConvert) {
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "border-color") {
+      const expanded = expandBorderColorShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "background") {
+      const expanded = expandBackgroundShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "font") {
+      const expanded = expandFontShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    style[declaration.prop] = declaration.value;
+  });
+
+  return { style, preservedDeclarations };
 };
 
 export const cssToJson = (css: string): { [index: string]: string }[] => {
@@ -79,6 +767,192 @@ export const cssToJson = (css: string): { [index: string]: string }[] => {
   return result;
 };
 
+export const cssToTailwindRules = (
+  css: string,
+  mode: ConversionMode = "tokens"
+) => {
+  const rules: RuleConversion[] = [];
+  const unsupported: ConversionIssue[] = [];
+  const warnings: ConversionIssue[] = [];
+  const leftovers: string[] = [];
+
+  let root: postcss.Root;
+  try {
+    root = postcss.parse(css);
+  } catch (error) {
+    warnings.push({
+      selector: "CSS",
+      category: "unsupported-value",
+      message:
+        error instanceof Error
+          ? `PostCSS could not parse this stylesheet: ${error.message}`
+          : "PostCSS could not parse this stylesheet.",
+    });
+    return { rules, unsupported, warnings, leftoverCss: css };
+  }
+
+  root.walkAtRules((atRule) => {
+    if (atRule.name !== "media" && atRule.nodes?.some((node) => node.type === "rule")) {
+      const selector = atRuleToString(atRule);
+      const category = "media-query";
+      warnings.push({
+        selector,
+        category,
+        message: getUnsupportedMessage({
+          category,
+          fallbackMessage:
+            "This at-rule is preserved for review because only simple media queries can become Tailwind variants.",
+        }),
+      });
+    }
+  });
+
+  root.walkRules((rule: Rule) => {
+    const ruleAtRules: string[] = [];
+    let parent = rule.parent;
+
+    while (parent?.type === "atrule") {
+      ruleAtRules.unshift(atRuleToString(parent as AtRule));
+      parent = parent.parent;
+    }
+
+    const variantPrefix = classPrefixForAtRules(ruleAtRules);
+    const unsupportedAtRule = ruleAtRules.length > 0 && !variantPrefix;
+
+    if (unsupportedAtRule) {
+      const selector = ruleAtRules.join(" ");
+      const category = "media-query";
+      warnings.push({
+        selector,
+        category,
+        message: getUnsupportedMessage({
+          category,
+          fallbackMessage:
+            "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
+        }),
+      });
+    }
+
+    rule.each((node) => {
+      if (node.type !== "decl" && node.type !== "comment") {
+        warnings.push({
+          selector: rule.selector,
+          category: "unsupported-value",
+          message: `Nested ${node.type} nodes are preserved for review.`,
+        });
+      }
+    });
+
+    const sourceDeclarations = rule.nodes?.filter(
+      (node): node is Declaration => node.type === "decl"
+    ) ?? [];
+    const { style, preservedDeclarations } =
+      normalizeDeclarations(sourceDeclarations);
+
+    if (Object.keys(style).length === 0) {
+      splitSelectorList(rule.selector).forEach((selector) => {
+        appendLeftover(leftovers, selector, sourceDeclarations, ruleAtRules);
+      });
+      return;
+    }
+
+    const declarationsResult = convertAttributesDetailed(style, { mode });
+    const unsupportedDeclarations: Pick<Declaration, "prop" | "value">[] = [
+      ...preservedDeclarations,
+    ];
+
+    declarationsResult.forEach((item) => {
+      const sourceDeclaration = sourceDeclarations.find(
+        (declaration) => declaration.prop === item.property
+      );
+
+      if (item.status === "unsupported" && sourceDeclaration) {
+        unsupportedDeclarations.push(sourceDeclaration);
+      } else if (item.status === "unsupported") {
+        unsupportedDeclarations.push({
+          prop: item.property,
+          value: item.value,
+        });
+      }
+
+      if (item.status === "unsupported") {
+        splitSelectorList(rule.selector).forEach((selector) => {
+          const category = classifyUnsupported({
+            selector,
+            property: item.property,
+            value: item.value,
+          });
+          unsupported.push({
+            selector,
+            property: item.property,
+            value: item.value,
+            category,
+            message: getUnsupportedMessage({
+              property: item.property,
+              value: item.value,
+              category,
+              fallbackMessage:
+                item.message ?? "Unsupported CSS declaration.",
+            }),
+          });
+        });
+      }
+    });
+
+    splitSelectorList(rule.selector).forEach((selector) => {
+      const selectorAnalysis = analyzeSelector(selector);
+      const canApply = selectorAnalysis.canApply && !unsupportedAtRule;
+
+      if (selectorAnalysis.warning) {
+        const category = classifyUnsupported({
+          selector,
+          fallback: "complex-selector",
+        });
+        warnings.push({
+          selector,
+          category,
+          message: getUnsupportedMessage({
+            category,
+            fallbackMessage: selectorAnalysis.warning,
+          }),
+        });
+      }
+
+      if (!canApply) {
+        appendLeftover(leftovers, selector, sourceDeclarations, ruleAtRules);
+      } else {
+        appendLeftover(leftovers, selector, unsupportedDeclarations, ruleAtRules);
+      }
+
+      const preserveOriginalClass =
+        !canApply || unsupportedDeclarations.length > 0;
+      const classNames = declarationsResult
+        .filter((item) => item.className)
+        .map((item) => {
+          const className = `${variantPrefix}${selectorAnalysis.variantPrefix}${item.className}`;
+          return {
+            ...item,
+            selector: selectorAnalysis.originalSelector,
+            className,
+          };
+        });
+
+      rules.push({
+        selector: selectorAnalysis.applySelector,
+        declarations: classNames,
+        atRules: ruleAtRules,
+        canApply,
+        preserveOriginalClass,
+        classes: canApply
+          ? classNames.map((item) => item.className).join(" ")
+          : "",
+      });
+    });
+  });
+
+  return { rules, unsupported, warnings, leftoverCss: leftovers.join("\n\n") };
+};
+
 export const getClosestValue = (sizes: (string | number)[], value: number) => {
   return sizes.reduce(
     (prev: number, curr: string | number) => {
@@ -98,7 +972,12 @@ export const validValue = (value: string) => {
 };
 
 interface ClassObject {
-  [selector: string]: string;
+  [selector: string]:
+    | string
+    | {
+        classes: string;
+        preserveOriginalClass: boolean;
+      };
 }
 
 export const parser = (html: string, classObjects: ClassObject[]) => {
@@ -109,7 +988,13 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
   for (const classObject of classObjects) {
     for (const selector in classObject) {
       if (Object.hasOwn(classObject, selector)) {
-        const tailwindClasses: string = classObject[selector];
+        const classValue = classObject[selector];
+        const tailwindClasses =
+          typeof classValue === "string" ? classValue : classValue.classes;
+        const preserveOriginalClass =
+          typeof classValue === "string"
+            ? false
+            : classValue.preserveOriginalClass;
         // temporary fix because media queries aren't supported yet
         // need to refactor the css parsing first
         if (tailwindClasses !== "" && !/[@{}]/.test(selector)) {
@@ -117,7 +1002,7 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
 
           if (elements) {
             elements.forEach((element) => {
-              if (selector.startsWith(".")) {
+              if (selector.startsWith(".") && !preserveOriginalClass) {
                 // Class-based selector: Replace specific class names
                 const originalClasses = element.className.split(" ");
                 const newClasses = originalClasses.map((cls) =>
@@ -125,9 +1010,15 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
                 );
                 element.className = newClasses.join(" ");
               } else {
-                // Tag-based selector (e.g., "body", "h2"): Add classes
-                element.className +=
-                  (element.className ? " " : "") + tailwindClasses;
+                // Tag-based selectors add classes; preserved class selectors keep leftovers working.
+                const currentClasses = element.className
+                  .split(" ")
+                  .filter(Boolean);
+                const newClasses = tailwindClasses.split(" ").filter(Boolean);
+                const mergedClasses = Array.from(
+                  new Set([...currentClasses, ...newClasses])
+                );
+                element.className = mergedClasses.join(" ");
               }
             });
           }
@@ -137,4 +1028,56 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
   }
 
   return doc.documentElement.outerHTML;
+};
+
+const addLeftoverCss = (html: string, leftoverCss: string) => {
+  if (!leftoverCss.trim()) return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const style = doc.createElement("style");
+  style.textContent = leftoverCss;
+  doc.head.appendChild(style);
+
+  return doc.documentElement.outerHTML;
+};
+
+export const convertHtmlCss = (
+  html: string,
+  css: string,
+  mode: ConversionMode = "tokens"
+): ConversionResult => {
+  const { rules, unsupported, warnings, leftoverCss } = cssToTailwindRules(
+    css,
+    mode
+  );
+  const classObjects = rules
+    .filter((rule) => rule.canApply)
+    .map((rule) => ({
+      [rule.selector]: {
+        classes: rule.classes,
+        preserveOriginalClass: rule.preserveOriginalClass,
+      },
+    }));
+  const convertedHtml = addLeftoverCss(parser(html, classObjects), leftoverCss);
+  const convertedDeclarations = rules.flatMap((rule) => rule.declarations);
+  const unsupportedDeclarations = unsupported.map((issue) => ({
+    selector: issue.selector,
+    property: issue.property ?? "",
+    value: issue.value ?? "",
+    className: "",
+    status: "unsupported" as const,
+    message: issue.message,
+  }));
+  const declarations = [...convertedDeclarations, ...unsupportedDeclarations];
+
+  return {
+    html: convertedHtml,
+    rules,
+    converted: declarations.filter((item) => item.status === "converted"),
+    approximated: declarations.filter((item) => item.status === "approximated"),
+    unsupported,
+    warnings,
+    leftoverCss,
+  };
 };
