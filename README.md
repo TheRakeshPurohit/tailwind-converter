@@ -107,5 +107,5 @@ Useful next milestones:
 
 - Improve scriptless converted preview rendering.
 - Add more unsupported-property classification.
-- Expand support for transitions, grid placement, advanced grid templates, and drop shadows.
+- Expand support for grid placement, advanced grid templates, background images, and drop shadows.
 - Add relationship-aware conversions for `space-*` and `divide-*`.

@@ -115,7 +115,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - **Effects:** opacity, box shadow, mix blend mode, background blend mode
 - **Filters:** blur, brightness, contrast, grayscale, hue rotate, invert, saturate, sepia, and backdrop equivalents
 - **Transforms:** scale, rotate, translate, skew, transform origin
-- **Interactivity:** cursor, appearance, accent color, caret color, pointer events, resize, scroll behavior, scroll snap, touch action, user select, will change
+- **Interactivity:** cursor, appearance, accent color, caret color, pointer events, resize, scroll behavior, scroll snap, touch action, user select, will change, transition property, transition duration, transition delay, transition timing function
 - **SVG:** fill, stroke, stroke width
 
 ### Not currently converted
@@ -127,7 +127,6 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - Divide and ring utilities
 - Drop shadow
 - Background images and gradients
-- Transition property and timing function
 - Animation
 - Border spacing
 - Screen reader utilities
@@ -150,7 +149,7 @@ Some Tailwind utility families are not generated because their underlying CSS is
 | `col-span-*`, `row-span-*`, `col-start-*`, `row-start-*` | `grid-column`, `grid-row` | Mostly not converted |
 | Gradient utilities such as `from-*`, `via-*`, `to-*` | `background-image`, gradient stops | Not converted |
 | `animate-*` | `animation`, `@keyframes` | Not converted |
-| `transition-*`, `ease-*` | `transition-property`, `transition-timing-function` | Partial: duration and delay are supported |
+| `transition-*`, `ease-*` | `transition-property`, `transition-duration`, `transition-delay`, `transition-timing-function` | Supports common Tailwind transition families and conservative one-item `transition` shorthands. Exact mode uses arbitrary values. |
 | `container` and container query utilities | Container sizing/query behavior | Not converted |
 | `sr-only`, `not-sr-only` | Compound accessibility declarations | Not converted |
 | `before:*`, `after:*` | `::before`, `::after`, `content` | Pseudo-elements are preserved for review |

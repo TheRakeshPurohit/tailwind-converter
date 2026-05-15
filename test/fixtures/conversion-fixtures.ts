@@ -76,6 +76,7 @@ export const conversionFixtures: ConversionFixture[] = [
         border-radius: 6px;
         text-decoration: none;
         cursor: pointer;
+        transition: background-color 200ms ease-out;
       }
 
       .features {
@@ -94,6 +95,7 @@ export const conversionFixtures: ConversionFixture[] = [
         "shadow-lg",
         "italic font-bold text-3xl",
         "inline-block pt-2 pr-4 pb-2 pl-4",
+        "transition-colors ease-out duration-200",
         "grid grid-cols-3 gap-4",
         "hover:bg-blue-700",
       ],
@@ -112,6 +114,11 @@ export const conversionFixtures: ConversionFixture[] = [
         },
         { selector: ".title", property: "color" },
         { selector: ".cta:hover", property: "background-color" },
+        {
+          selector: ".cta",
+          property: "transition-property",
+          className: "transition-colors",
+        },
       ],
       unsupported: [
         { selector: ".card", property: "margin-right", value: "auto" },

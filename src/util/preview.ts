@@ -151,6 +151,20 @@ const staticUtilities: { [utility: string]: string } = {
   "grid-cols-subgrid": "grid-template-columns: subgrid;",
   "grid-rows-none": "grid-template-rows: none;",
   "grid-rows-subgrid": "grid-template-rows: subgrid;",
+  transition:
+    "transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter; transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);",
+  "transition-none": "transition-property: none;",
+  "transition-all": "transition-property: all;",
+  "transition-colors":
+    "transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;",
+  "transition-opacity": "transition-property: opacity;",
+  "transition-shadow": "transition-property: box-shadow;",
+  "transition-transform": "transition-property: transform;",
+  "ease-linear": "transition-timing-function: linear;",
+  "ease-in": "transition-timing-function: cubic-bezier(0.4, 0, 1, 1);",
+  "ease-out": "transition-timing-function: cubic-bezier(0, 0, 0.2, 1);",
+  "ease-in-out":
+    "transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);",
   "shadow-none": "box-shadow: none;",
   "shadow-2xs": "box-shadow: 0 1px rgb(0 0 0 / 0.05);",
   "shadow-xs": "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
@@ -229,6 +243,10 @@ const declarationsForUtility = (utility: string) => {
       "max-h": "max-height",
       text: "font-size",
       leading: "line-height",
+      transition: "transition-property",
+      duration: "transition-duration",
+      delay: "transition-delay",
+      ease: "transition-timing-function",
       rounded: "border-radius",
       shadow: "box-shadow",
       "grid-cols": "grid-template-columns",
@@ -304,6 +322,12 @@ const declarationsForUtility = (utility: string) => {
 
   const opacityMatch = utility.match(/^opacity-(\d+)$/);
   if (opacityMatch) return `opacity: ${Number(opacityMatch[1]) / 100};`;
+
+  const durationMatch = utility.match(/^(duration|delay)-(\d+)$/);
+  if (durationMatch) {
+    const [, prefix, value] = durationMatch;
+    return `transition-${prefix === "duration" ? "duration" : "delay"}: ${value}ms;`;
+  }
 
   return "";
 };

@@ -124,6 +124,12 @@ const exactClassFor = (property: string, value: string) => {
   if (property === "transition-delay") {
     return `delay-[${arbitraryValue(value)}]`;
   }
+  if (property === "transition-property") {
+    return `transition-[${arbitraryValue(value)}]`;
+  }
+  if (property === "transition-timing-function") {
+    return `ease-[${arbitraryValue(value)}]`;
+  }
   if (property === "box-shadow") {
     return `shadow-[${arbitraryValue(value)}]`;
   }
@@ -153,6 +159,59 @@ const gridTemplateClassFor = (property: string, value: string) => {
   }
 
   return "";
+};
+
+const normalizeTransitionProperty = (value: string) =>
+  value
+    .toLowerCase()
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .sort()
+    .join(", ");
+
+const transitionPropertyClassFor = (value: string) => {
+  const normalized = normalizeTransitionProperty(value);
+  const colorProperties = [
+    "background-color",
+    "border-color",
+    "color",
+    "fill",
+    "outline-color",
+    "stroke",
+    "text-decoration-color",
+  ];
+
+  if (normalized === "none") return "transition-none";
+  if (normalized === "all") return "transition-all";
+  if (normalized === "opacity") return "transition-opacity";
+  if (normalized === "box-shadow") return "transition-shadow";
+  if (normalized === "transform") return "transition-transform";
+  if (
+    normalized === colorProperties.slice().sort().join(", ") ||
+    normalized
+      .split(", ")
+      .every((property) => colorProperties.includes(property))
+  ) {
+    return "transition-colors";
+  }
+
+  return "";
+};
+
+const transitionTimingClassFor = (value: string) => {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+  const timingMap: { [value: string]: string } = {
+    linear: "ease-linear",
+    "ease-in": "ease-in",
+    "cubic-bezier(0.4, 0, 1, 1)": "ease-in",
+    "ease-out": "ease-out",
+    "cubic-bezier(0, 0, 0.2, 1)": "ease-out",
+    "ease-in-out": "ease-in-out",
+    "cubic-bezier(0.4, 0, 0.2, 1)": "ease-in-out",
+  };
+
+  return timingMap[normalized] ?? "";
 };
 
 type ShadowToken = {
@@ -383,6 +442,10 @@ export const convertAttributesDetailed = (
       abbreviation = "delay";
       if (!styleValue.includes("ms")) styleNumber = styleNumber * 1000;
       tailwindValue = getClosestValue(duration, styleNumber);
+    } else if (style === "transition-property") {
+      tailwindValue = transitionPropertyClassFor(styleValue);
+    } else if (style === "transition-timing-function") {
+      tailwindValue = transitionTimingClassFor(styleValue);
     } else if (style === "order") {
       abbreviation = "order";
       if (styleNumber === -9999) tailwindValue = "first";

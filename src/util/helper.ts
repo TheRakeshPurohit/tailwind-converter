@@ -130,8 +130,6 @@ const unsupportedProperties = new Set([
   "animation",
   "background-image",
   "border-spacing",
-  "transition-property",
-  "transition-timing-function",
 ]);
 
 const classifyUnsupported = ({
@@ -657,6 +655,53 @@ const expandFontShorthand = (value: string) => {
   return expanded;
 };
 
+const isTransitionTime = (value: string) => /^-?\d*\.?\d+m?s$/.test(value);
+
+const isTransitionTiming = (value: string) =>
+  /^(linear|ease|ease-in|ease-out|ease-in-out)$/.test(value) ||
+  value.startsWith("cubic-bezier(");
+
+const expandTransitionShorthand = (value: string) => {
+  if (value.includes(",")) return null;
+
+  const values = splitCssValue(value);
+  if (values.length === 0) return null;
+
+  const expanded: CSSProperties = {};
+  const timeValues: string[] = [];
+
+  for (const part of values) {
+    const normalizedPart = part.toLowerCase();
+
+    if (normalizedPart === "normal") continue;
+
+    if (isTransitionTime(normalizedPart)) {
+      timeValues.push(part);
+      continue;
+    }
+
+    if (isTransitionTiming(normalizedPart)) {
+      expanded["transition-timing-function"] = part;
+      continue;
+    }
+
+    if (!expanded["transition-property"]) {
+      expanded["transition-property"] = part;
+      continue;
+    }
+
+    return null;
+  }
+
+  if (timeValues[0]) expanded["transition-duration"] = timeValues[0];
+  if (timeValues[1]) expanded["transition-delay"] = timeValues[1];
+  if (!expanded["transition-property"]) {
+    expanded["transition-property"] = "all";
+  }
+
+  return Object.keys(expanded).length > 0 ? expanded : null;
+};
+
 const normalizeDeclarations = (
   declarations: Declaration[]
 ): NormalizedDeclarations => {
@@ -715,6 +760,17 @@ const normalizeDeclarations = (
 
     if (declaration.prop === "font") {
       const expanded = expandFontShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "transition") {
+      const expanded = expandTransitionShorthand(declaration.value);
       if (expanded) {
         Object.assign(style, expanded);
       } else {

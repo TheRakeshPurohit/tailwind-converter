@@ -227,6 +227,82 @@ test("can prefer exact arbitrary grid templates", () => {
   ]);
 });
 
+test("converts transition properties and timing functions", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta {
+      transition-property: color, background-color, border-color;
+      transition-duration: 200ms;
+      transition-delay: 75ms;
+      transition-timing-function: ease-out;
+    }`
+  );
+
+  expect(result.html).toContain(
+    'class="transition-colors duration-200 delay-75 ease-out"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".cta",
+        property: "transition-property",
+        className: "transition-colors",
+      }),
+      expect.objectContaining({
+        selector: ".cta",
+        property: "transition-timing-function",
+        className: "ease-out",
+      }),
+    ])
+  );
+});
+
+test("expands conservative transition shorthand", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta { transition: opacity 300ms ease-in-out 75ms; }`
+  );
+
+  expect(result.html).toContain(
+    'class="transition-opacity ease-in-out duration-300 delay-75"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves unsupported multi-transition shorthand", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta { transition: opacity 200ms ease, transform 300ms linear; }`
+  );
+
+  expect(result.html).toContain('class="cta"');
+  expect(result.leftoverCss).toContain(
+    "transition: opacity 200ms ease, transform 300ms linear;"
+  );
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".cta",
+      property: "transition",
+      value: "opacity 200ms ease, transform 300ms linear",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary transition values", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta {
+      transition-property: width;
+      transition-timing-function: ease;
+    }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="transition-[width] ease-[ease]"');
+  expect(result.leftoverCss).toBe("");
+});
+
 test("can prefer exact arbitrary values for supported declarations", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
@@ -649,4 +725,23 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(
     "@media (min-width: 768px){.md\\:p-8{padding: 2rem;}}"
   );
+});
+
+test("generates scriptless preview css for transition utilities", () => {
+  const result = generatePreviewCss(
+    `<button class="transition-colors duration-200 delay-75 ease-out transition-[width] ease-[ease]"></button>`
+  );
+
+  expect(result).toContain(
+    ".transition-colors{transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;}"
+  );
+  expect(result).toContain(".duration-200{transition-duration: 200ms;}");
+  expect(result).toContain(".delay-75{transition-delay: 75ms;}");
+  expect(result).toContain(
+    ".ease-out{transition-timing-function: cubic-bezier(0, 0, 0.2, 1);}"
+  );
+  expect(result).toContain(
+    ".transition-\\[width\\]{transition-property: width;}"
+  );
+  expect(result).toContain(".ease-\\[ease\\]{transition-timing-function: ease;}");
 });
