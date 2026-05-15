@@ -94,16 +94,6 @@ function App() {
     setCssText(initialCSS);
   };
 
-  const codepenOriginal = JSON.stringify({
-    title: "Original HTML/CSS",
-    html: htmlText,
-    css: cssText,
-  });
-  const codepenTailwind = JSON.stringify({
-    title: "Tailwind version",
-    html: tailwindText,
-    head: '<script src="https://cdn.tailwindcss.com"></script>',
-  });
   const reviewCount = conversionResult
     ? conversionResult.unsupported.length + conversionResult.warnings.length
     : 0;
@@ -325,38 +315,6 @@ function App() {
                   >
                     <Undo />
                   </Button>
-                  <form
-                    action="https://codepen.io/pen/define"
-                    method="POST"
-                    target="_blank"
-                  >
-                    <input type="hidden" name="data" value={codepenOriginal} />
-                    <Button
-                      variant="outline"
-                      type="submit"
-                      title="codepen preview"
-                      value=""
-                      className="mr-2.5 mt-3.5 cursor-pointer"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
-                        <line x1="12" x2="12" y1="22" y2="15.5" />
-                        <polyline points="22 8.5 12 15.5 2 8.5" />
-                        <polyline points="2 15.5 12 8.5 22 15.5" />
-                        <line x1="12" x2="12" y1="2" y2="8.5" />
-                      </svg>
-                    </Button>
-                  </form>
                   <Button
                     onClick={convertToTailwind}
                     className="mr-4 mt-3.5 cursor-pointer"
@@ -413,7 +371,7 @@ function App() {
                 </div>
                 <div className="flex flex-wrap justify-end">
                   <div
-                    className="mr-2.5 mt-3.5 inline-flex h-9 overflow-hidden rounded-md border bg-background"
+                    className="mr-4 mt-3.5 inline-flex h-9 overflow-hidden rounded-md border bg-background"
                     aria-label="conversion mode"
                   >
                     <Button
@@ -435,38 +393,6 @@ function App() {
                       Exact
                     </Button>
                   </div>
-                  <form
-                    action="https://codepen.io/pen/define"
-                    method="POST"
-                    target="_blank"
-                  >
-                    <input type="hidden" name="data" value={codepenTailwind} />
-                    <Button
-                      variant="outline"
-                      type="submit"
-                      title="codepen preview"
-                      value=""
-                      className="mr-4 mt-3.5 cursor-pointer"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
-                        <line x1="12" x2="12" y1="22" y2="15.5" />
-                        <polyline points="22 8.5 12 15.5 2 8.5" />
-                        <polyline points="2 15.5 12 8.5 22 15.5" />
-                        <line x1="12" x2="12" y1="2" y2="8.5" />
-                      </svg>
-                    </Button>
-                  </form>
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
