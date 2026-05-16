@@ -56,14 +56,46 @@ const preservedWarningCategories = new Set([
 
 const reviewBadgeClasses: Record<Exclude<ReviewStatus, "all">, string> = {
   converted:
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300",
   approximated:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  unsupported: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-  preserved: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+  unsupported: "border-rose-500/20 bg-rose-500/5 text-rose-700 dark:text-rose-300",
+  preserved: "border-slate-500/20 bg-slate-500/5 text-slate-700 dark:text-slate-300",
   warnings:
-    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-300",
 };
+
+const reviewStatusDotClasses: Record<ReviewStatus, string> = {
+  all: "bg-muted-foreground",
+  converted: "bg-emerald-500",
+  approximated: "bg-amber-500",
+  unsupported: "bg-rose-500",
+  preserved: "bg-slate-400",
+  warnings: "bg-violet-500",
+};
+
+const reviewFilterButtonClass = (isSelected: boolean) =>
+  cn(
+    "inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
+    isSelected
+      ? "border-foreground/25 bg-muted text-foreground shadow-xs dark:border-white/20 dark:bg-muted/80"
+      : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
+  );
+
+const countPillClass =
+  "rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground dark:bg-background/50";
+
+const reviewCardClass = "rounded-md border border-border/70 bg-card/30 p-3";
+
+const categoryPillClass =
+  "rounded-md border border-border/70 bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground";
+
+const ReviewStatusDot = ({ status }: { status: ReviewStatus }) => (
+  <span
+    aria-hidden="true"
+    className={cn("size-1.5 rounded-full", reviewStatusDotClasses[status])}
+  />
+);
 
 const segmentedButtonClass = (isSelected: boolean, className?: string) =>
   cn(
@@ -81,8 +113,12 @@ const ReviewBadge = ({
   children: ReactNode;
 }) => (
   <span
-    className={`rounded border px-1.5 py-0.5 text-xs font-medium ${reviewBadgeClasses[status]}`}
+    className={cn(
+      "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+      reviewBadgeClasses[status]
+    )}
   >
+    <ReviewStatusDot status={status} />
     {children}
   </span>
 );
@@ -219,35 +255,6 @@ function App() {
     conversionResult?.warnings.filter(
       (issue) => !preservedWarningCategories.has(issue.category)
     ).length ?? 0;
-  const reviewSummaryItems = conversionResult
-    ? [
-        {
-          status: "converted" as const,
-          label: "Converted",
-          count: conversionResult.converted.length,
-        },
-        {
-          status: "approximated" as const,
-          label: "Approximated",
-          count: conversionResult.approximated.length,
-        },
-        {
-          status: "unsupported" as const,
-          label: "Unsupported",
-          count: conversionResult.unsupported.length,
-        },
-        {
-          status: "preserved" as const,
-          label: "Preserved",
-          count: conversionResult.preservedRules.length,
-        },
-        {
-          status: "warnings" as const,
-          label: "Warnings",
-          count: reportWarningCount,
-        },
-      ]
-    : [];
   const statusCounts: Record<ReviewStatus, number> = {
     all:
       filteredRules.length +
@@ -601,7 +608,7 @@ function App() {
                 {outputView === "review" && (
                   <div className="h-full overflow-auto bg-background p-4 text-sm">
                     {!conversionResult && (
-                      <div className="rounded border p-4">
+                      <div className="rounded-md border border-border/70 bg-card/30 p-4">
                         <h3 className="mb-1 font-medium">Review Report</h3>
                         <p className="text-muted-foreground">
                           Convert HTML and CSS to see converted classes,
@@ -612,8 +619,8 @@ function App() {
                     )}
                     {conversionResult && (
                       <div className="space-y-4">
-                        <div className="rounded border p-3">
-                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <div className={reviewCardClass}>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <h3 className="font-medium">Conversion Report</h3>
                               <p className="text-xs text-muted-foreground">
@@ -633,21 +640,6 @@ function App() {
                               </Button>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {reviewSummaryItems.map((item) => (
-                              <button
-                                key={item.status}
-                                type="button"
-                                onClick={() => setReviewStatus(item.status)}
-                                className={`cursor-pointer rounded border px-2.5 py-1 text-left text-xs ${reviewBadgeClasses[item.status]}`}
-                              >
-                                <span className="font-medium">
-                                  {item.count}
-                                </span>{" "}
-                                {item.label}
-                              </button>
-                            ))}
-                          </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <select
@@ -665,7 +657,7 @@ function App() {
                               </option>
                             ))}
                           </select>
-                          <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
+                          <div className="flex flex-wrap gap-1.5">
                             {(
                               [
                                 "all",
@@ -676,21 +668,21 @@ function App() {
                                 "warnings",
                               ] as ReviewStatus[]
                             ).map((status) => (
-                              <Button
+                              <button
                                 key={status}
+                                type="button"
                                 onClick={() => setReviewStatus(status)}
-                                variant={
-                                  reviewStatus === status ? "default" : "ghost"
-                                }
                                 aria-pressed={reviewStatus === status}
-                                className={segmentedButtonClass(
-                                  reviewStatus === status,
-                                  "capitalize"
+                                className={reviewFilterButtonClass(
+                                  reviewStatus === status
                                 )}
                               >
-                                {reviewStatusLabels[status]}{" "}
-                                {statusCounts[status]}
-                              </Button>
+                                <ReviewStatusDot status={status} />
+                                <span>{reviewStatusLabels[status]}</span>
+                                <span className={countPillClass}>
+                                  {statusCounts[status]}
+                                </span>
+                              </button>
                             ))}
                           </div>
                           {filtersActive && (
@@ -705,7 +697,7 @@ function App() {
                           )}
                         </div>
                         {!hasIssues && !filtersActive && (
-                          <div className="rounded border p-4">
+                          <div className="rounded-md border border-border/70 bg-card/30 p-4">
                             <h3 className="mb-1 font-medium">
                               No review items
                             </h3>
@@ -723,7 +715,7 @@ function App() {
                               {filteredRules.map((rule, index) => (
                                 <div
                                   key={`${rule.selector}-${index}`}
-                                  className="rounded border p-3"
+                                  className={reviewCardClass}
                                 >
                                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -757,7 +749,7 @@ function App() {
                                 {filteredUnsupported.map((issue, index) => (
                                   <div
                                     key={`unsupported-${index}`}
-                                    className="rounded border p-3 text-muted-foreground"
+                                    className={`${reviewCardClass} text-muted-foreground`}
                                   >
                                     <div className="mb-1 flex flex-wrap items-center gap-2">
                                       <span className="font-medium text-foreground">
@@ -766,7 +758,7 @@ function App() {
                                       <ReviewBadge status="unsupported">
                                         Unsupported
                                       </ReviewBadge>
-                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                      <span className={categoryPillClass}>
                                         {issue.category}
                                       </span>
                                     </div>
@@ -792,7 +784,7 @@ function App() {
                                 {filteredPreservedRules.map((rule, index) => (
                                   <div
                                     key={`preserved-${rule.selector}-${index}`}
-                                    className="rounded border p-3"
+                                    className={reviewCardClass}
                                   >
                                     <div className="mb-2 flex flex-wrap items-center gap-2">
                                       <span className="font-medium">
@@ -801,14 +793,14 @@ function App() {
                                       <ReviewBadge status="preserved">
                                         Preserved
                                       </ReviewBadge>
-                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                      <span className={categoryPillClass}>
                                         {rule.category}
                                       </span>
                                     </div>
                                     <p className="mb-2 text-muted-foreground">
                                       {rule.message}
                                     </p>
-                                    <pre className="overflow-auto rounded bg-muted p-3 font-mono text-xs text-muted-foreground">
+                                    <pre className="overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
                                       <code>{rule.css}</code>
                                     </pre>
                                   </div>
@@ -825,7 +817,7 @@ function App() {
                                 {filteredWarnings.map((issue, index) => (
                                   <div
                                     key={`warning-${index}`}
-                                    className="rounded border p-3 text-muted-foreground"
+                                    className={`${reviewCardClass} text-muted-foreground`}
                                   >
                                     <div className="mb-1 flex flex-wrap items-center gap-2">
                                       <span className="font-medium text-foreground">
@@ -834,7 +826,7 @@ function App() {
                                       <ReviewBadge status="warnings">
                                         Warning
                                       </ReviewBadge>
-                                      <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                                      <span className={categoryPillClass}>
                                         {issue.category}
                                       </span>
                                     </div>
@@ -853,7 +845,7 @@ function App() {
                                 {filteredApproximated.map((item, index) => (
                                   <div
                                     key={`approximated-${index}`}
-                                    className="rounded border p-3 text-muted-foreground"
+                                    className={`${reviewCardClass} text-muted-foreground`}
                                   >
                                     <div className="mb-1 flex flex-wrap items-center gap-2">
                                       <span className="font-medium text-foreground">
@@ -881,7 +873,7 @@ function App() {
                                 {filteredConverted.map((item, index) => (
                                   <div
                                     key={`converted-${index}`}
-                                    className="rounded border p-3"
+                                    className={reviewCardClass}
                                   >
                                     <div className="mb-1 flex flex-wrap items-center gap-2">
                                       <span className="font-medium">
@@ -901,7 +893,7 @@ function App() {
                             </section>
                           )}
                         {!hasReviewItems && (
-                          <div className="rounded border p-4 text-muted-foreground">
+                          <div className="rounded-md border border-border/70 bg-card/30 p-4 text-muted-foreground">
                             No review items match the current filters.
                           </div>
                         )}
