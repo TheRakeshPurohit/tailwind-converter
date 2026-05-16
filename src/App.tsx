@@ -35,6 +35,7 @@ import {
   sanitizePreviewCss,
   sanitizePreviewHtml,
 } from "./util/preview";
+import { cn } from "./lib/utils";
 
 type OutputView = "html" | "review" | "css" | "preview";
 type ReviewStatus =
@@ -58,13 +59,19 @@ const reviewBadgeClasses: Record<Exclude<ReviewStatus, "all">, string> = {
     "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   approximated:
     "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  unsupported:
-    "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-  preserved:
-    "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  unsupported: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+  preserved: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
   warnings:
     "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
 };
+
+const segmentedButtonClass = (isSelected: boolean, className?: string) =>
+  cn(
+    "h-9 cursor-pointer rounded-none px-3",
+    !isSelected &&
+      "hover:bg-primary/10 hover:text-foreground dark:hover:bg-primary/15",
+    className
+  );
 
 const ReviewBadge = ({
   status,
@@ -469,18 +476,22 @@ function App() {
                     <Button
                       onClick={() => updateConversionMode("tokens")}
                       variant={
-                        conversionMode === "tokens" ? "secondary" : "ghost"
+                        conversionMode === "tokens" ? "default" : "ghost"
                       }
-                      className="h-9 cursor-pointer rounded-none px-3"
+                      aria-pressed={conversionMode === "tokens"}
+                      className={segmentedButtonClass(
+                        conversionMode === "tokens"
+                      )}
                     >
                       Tokens
                     </Button>
                     <Button
                       onClick={() => updateConversionMode("exact")}
-                      variant={
-                        conversionMode === "exact" ? "secondary" : "ghost"
-                      }
-                      className="h-9 cursor-pointer rounded-none px-3"
+                      variant={conversionMode === "exact" ? "default" : "ghost"}
+                      aria-pressed={conversionMode === "exact"}
+                      className={segmentedButtonClass(
+                        conversionMode === "exact"
+                      )}
                     >
                       Exact
                     </Button>
@@ -491,51 +502,43 @@ function App() {
                 <div className="inline-flex h-9 overflow-hidden rounded-md border bg-background">
                   <Button
                     onClick={() => setOutputView("html")}
-                    variant={outputView === "html" ? "secondary" : "ghost"}
-                    className="h-9 cursor-pointer rounded-none px-3"
+                    variant={outputView === "html" ? "default" : "ghost"}
+                    aria-pressed={outputView === "html"}
+                    className={segmentedButtonClass(outputView === "html")}
                   >
                     <Code2 />
                     HTML
                   </Button>
                   <Button
                     onClick={() => setOutputView("review")}
-                    variant={outputView === "review" ? "secondary" : "ghost"}
-                    className="h-9 cursor-pointer rounded-none px-3"
+                    variant={outputView === "review" ? "default" : "ghost"}
+                    aria-pressed={outputView === "review"}
+                    className={segmentedButtonClass(outputView === "review")}
                   >
                     <ClipboardList />
                     Review
                   </Button>
                   <Button
                     onClick={() => setOutputView("css")}
-                    variant={outputView === "css" ? "secondary" : "ghost"}
-                    className="h-9 cursor-pointer rounded-none px-3"
+                    variant={outputView === "css" ? "default" : "ghost"}
+                    aria-pressed={outputView === "css"}
+                    className={segmentedButtonClass(outputView === "css")}
                   >
                     <FileWarning />
                     CSS
                   </Button>
                   <Button
                     onClick={() => setOutputView("preview")}
-                    variant={outputView === "preview" ? "secondary" : "ghost"}
-                    className="h-9 cursor-pointer rounded-none px-3"
+                    variant={outputView === "preview" ? "default" : "ghost"}
+                    aria-pressed={outputView === "preview"}
+                    className={segmentedButtonClass(outputView === "preview")}
                   >
                     <Eye />
                     Preview
                   </Button>
                 </div>
                 {conversionResult && (
-                  <div className="flex min-w-56 flex-wrap items-center gap-2 text-sm">
-                    <div className="w-32">
-                      <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                        <span>{confidenceLabel}</span>
-                        <span>{confidencePercent}%</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full bg-primary"
-                          style={{ width: `${confidencePercent}%` }}
-                        />
-                      </div>
-                    </div>
+                  <div className="flex min-w-56 flex-wrap items-center gap-2 text-sm justify-start lg:justify-end">
                     <span className="rounded border px-2 py-1">
                       Converted {convertedCount}
                     </span>
@@ -677,11 +680,13 @@ function App() {
                                 key={status}
                                 onClick={() => setReviewStatus(status)}
                                 variant={
-                                  reviewStatus === status
-                                    ? "secondary"
-                                    : "ghost"
+                                  reviewStatus === status ? "default" : "ghost"
                                 }
-                                className="h-9 cursor-pointer rounded-none px-3 capitalize"
+                                aria-pressed={reviewStatus === status}
+                                className={segmentedButtonClass(
+                                  reviewStatus === status,
+                                  "capitalize"
+                                )}
                               >
                                 {reviewStatusLabels[status]}{" "}
                                 {statusCounts[status]}
@@ -924,9 +929,13 @@ function App() {
                               key={mode}
                               onClick={() => setPreviewMode(mode)}
                               variant={
-                                previewMode === mode ? "secondary" : "ghost"
+                                previewMode === mode ? "default" : "ghost"
                               }
-                              className="h-9 cursor-pointer rounded-none px-3 capitalize"
+                              aria-pressed={previewMode === mode}
+                              className={segmentedButtonClass(
+                                previewMode === mode,
+                                "capitalize"
+                              )}
                             >
                               {mode}
                             </Button>
@@ -937,10 +946,13 @@ function App() {
                             onClick={() => setPreviewViewport("desktop")}
                             variant={
                               previewViewport === "desktop"
-                                ? "secondary"
+                                ? "default"
                                 : "ghost"
                             }
-                            className="h-9 cursor-pointer rounded-none px-3"
+                            aria-pressed={previewViewport === "desktop"}
+                            className={segmentedButtonClass(
+                              previewViewport === "desktop"
+                            )}
                           >
                             <Monitor />
                             Desktop
@@ -948,11 +960,12 @@ function App() {
                           <Button
                             onClick={() => setPreviewViewport("tablet")}
                             variant={
-                              previewViewport === "tablet"
-                                ? "secondary"
-                                : "ghost"
+                              previewViewport === "tablet" ? "default" : "ghost"
                             }
-                            className="h-9 cursor-pointer rounded-none px-3"
+                            aria-pressed={previewViewport === "tablet"}
+                            className={segmentedButtonClass(
+                              previewViewport === "tablet"
+                            )}
                           >
                             <Tablet />
                             Tablet
@@ -960,11 +973,12 @@ function App() {
                           <Button
                             onClick={() => setPreviewViewport("mobile")}
                             variant={
-                              previewViewport === "mobile"
-                                ? "secondary"
-                                : "ghost"
+                              previewViewport === "mobile" ? "default" : "ghost"
                             }
-                            className="h-9 cursor-pointer rounded-none px-3"
+                            aria-pressed={previewViewport === "mobile"}
+                            className={segmentedButtonClass(
+                              previewViewport === "mobile"
+                            )}
                           >
                             <Smartphone />
                             Mobile
