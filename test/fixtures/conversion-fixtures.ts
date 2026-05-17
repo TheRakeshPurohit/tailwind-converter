@@ -92,16 +92,13 @@ export const conversionFixtures: ConversionFixture[] = [
     expected: {
       htmlIncludes: [
         'class="p-8 bg-white"',
+        "mt-0 mr-auto mb-0 ml-auto",
         "shadow-lg",
         "italic font-bold text-3xl",
         "inline-block pt-2 pr-4 pb-2 pl-4",
         "transition-colors ease-out duration-200",
         "grid grid-cols-3 gap-4",
         "hover:bg-blue-700",
-      ],
-      leftoverIncludes: [
-        "margin-right: auto;",
-        "margin-left: auto;",
       ],
       converted: [{ selector: ".title", property: "font-style", className: "italic" }],
       approximated: [
@@ -119,10 +116,6 @@ export const conversionFixtures: ConversionFixture[] = [
           property: "transition-property",
           className: "transition-colors",
         },
-      ],
-      unsupported: [
-        { selector: ".card", property: "margin-right", value: "auto" },
-        { selector: ".card", property: "margin-left", value: "auto" },
       ],
     },
   },

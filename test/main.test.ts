@@ -68,6 +68,49 @@ h2 {
   expect(tailwind).toBe(result);
 });
 
+test("converts unitless zero spacing on body", () => {
+  const result = convertHtmlCss(
+    `<html><body><main>Content</main></body></html>`,
+    `body { margin: 0; padding: 0; }`
+  );
+
+  expect(result.html).toContain('<body class="m-0 p-0">');
+  expect(result.converted).toEqual([
+    {
+      selector: "body",
+      property: "margin",
+      value: "0",
+      className: "m-0",
+      status: "converted",
+    },
+    {
+      selector: "body",
+      property: "padding",
+      value: "0",
+      className: "p-0",
+      status: "converted",
+    },
+  ]);
+});
+
+test("converts standalone keyword font weight", () => {
+  const result = convertHtmlCss(
+    `<html><body><h1 class="logo">MySite</h1></body></html>`,
+    `.logo { font-size: 24px; font-weight: bold; }`
+  );
+
+  expect(result.html).toContain('class="text-2xl font-bold"');
+  expect(result.converted).toContainEqual(
+    expect.objectContaining({
+      selector: ".logo",
+      property: "font-weight",
+      value: "bold",
+      className: "font-bold",
+      status: "converted",
+    })
+  );
+});
+
 test("reports unsupported declarations instead of dropping them silently", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
@@ -386,26 +429,27 @@ test("expands two-value padding shorthand into longhand Tailwind classes", () =>
   expect(result.leftoverCss).toBe("");
 });
 
-test("preserves unsupported expanded shorthand pieces", () => {
+test("converts auto margin shorthand pieces", () => {
   const result = convertHtmlCss(
     `<html><body><div class="box">Box</div></body></html>`,
     `.box { margin: auto 2rem; }`
   );
 
-  expect(result.html).toContain('class="box mr-8 ml-8"');
-  expect(result.leftoverCss).toContain("margin-top: auto;");
-  expect(result.leftoverCss).toContain("margin-bottom: auto;");
-  expect(result.unsupported).toEqual(
+  expect(result.html).toContain('class="mt-auto mr-8 mb-auto ml-8"');
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         selector: ".box",
         property: "margin-top",
         value: "auto",
+        className: "mt-auto",
       }),
       expect.objectContaining({
         selector: ".box",
         property: "margin-bottom",
         value: "auto",
+        className: "mb-auto",
       }),
     ])
   );

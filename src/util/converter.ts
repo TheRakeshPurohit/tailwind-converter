@@ -350,7 +350,11 @@ export const convertAttributesDetailed = (
         const direction = style.split("-")[1].charAt(0);
         abbreviation += direction;
       }
-      if (styleValue.includes("px")) {
+      if (styleValue === "auto" && style.startsWith("margin")) {
+        tailwindValue = "auto";
+      } else if (styleValue === "0") {
+        tailwindValue = 0;
+      } else if (styleValue.includes("px")) {
         styleNumber = styleNumber / 16;
         tailwindValue = getClosestValue(sizes, styleNumber * 4);
       } else if (styleValue.includes("rem")) {
@@ -379,6 +383,8 @@ export const convertAttributesDetailed = (
       tailwindValue = get(fontSize, size, "");
     } else if (style === "font-weight") {
       abbreviation = "font";
+      if (styleValue === "normal") styleNumber = 400;
+      if (styleValue === "bold") styleNumber = 700;
       tailwindValue = get(fontWeight, styleNumber, "");
     } else if (style === "font-style") {
       tailwindValue = styleValue === "italic" ? "italic" : "non-italic";
@@ -749,7 +755,14 @@ export const convertAttributesDetailed = (
         : String(tailwindValue);
       const exactClass = exactClassFor(style, originalValue);
       const shouldUseExact = mode === "exact" && exactClass;
-      const status = shouldUseExact || !exactClass ? "converted" : "approximated";
+      const isExactSpacingToken =
+        (originalValue.trim() === "0" && tailwindValue === 0) ||
+        (originalValue.trim().toLowerCase() === "auto" &&
+          tailwindValue === "auto");
+      const status =
+        shouldUseExact || !exactClass || isExactSpacingToken
+          ? "converted"
+          : "approximated";
       result.push({
         property: style,
         value: originalValue,
