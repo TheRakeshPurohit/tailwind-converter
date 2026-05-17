@@ -46,6 +46,7 @@ type SelectorAnalysis = {
   applySelector: string;
   variantPrefix: string;
   canApply: boolean;
+  preserveOriginalClass?: boolean;
   warning?: string;
 };
 
@@ -101,7 +102,14 @@ export type ConversionResult = {
   leftoverCss: string;
 };
 
-const simpleSelectorPattern = String.raw`(?:\.[_a-zA-Z][\w-]*|[a-zA-Z][\w-]*)`;
+const simpleSelectorPattern = String.raw`(?:\.[_a-zA-Z][\w-]*|#[A-Za-z_][\w-]*|[a-zA-Z][\w-]*)`;
+const simpleSelector = new RegExp(`^${simpleSelectorPattern}$`);
+
+const getSimpleDescendantParts = (selector: string) => {
+  const parts = selector.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  return parts.every((part) => simpleSelector.test(part)) ? parts : null;
+};
 
 const pseudoClassVariants: { [pseudoClass: string]: string } = {
   hover: "hover",
@@ -278,7 +286,6 @@ const splitSelectorList = (selector: string) => {
 };
 
 const analyzeSelector = (selector: string): SelectorAnalysis => {
-  const simpleSelector = new RegExp(`^${simpleSelectorPattern}$`);
   if (simpleSelector.test(selector)) {
     return {
       originalSelector: selector,
@@ -286,6 +293,38 @@ const analyzeSelector = (selector: string): SelectorAnalysis => {
       variantPrefix: "",
       canApply: true,
     };
+  }
+
+  if (getSimpleDescendantParts(selector)) {
+    return {
+      originalSelector: selector,
+      applySelector: selector,
+      variantPrefix: "",
+      canApply: true,
+      preserveOriginalClass: true,
+      warning:
+        "Descendant selector was applied to currently matched elements. Review if this relationship is dynamic.",
+    };
+  }
+
+  const descendantPseudoClassSelector = new RegExp(
+    `^(${simpleSelectorPattern}(?:\\s+${simpleSelectorPattern})+):([a-z-]+)$`
+  );
+  const descendantPseudoClassMatch = selector.match(descendantPseudoClassSelector);
+  if (descendantPseudoClassMatch) {
+    const [, applySelector, pseudoClass] = descendantPseudoClassMatch;
+    const variant = pseudoClassVariants[pseudoClass];
+    if (variant && getSimpleDescendantParts(applySelector)) {
+      return {
+        originalSelector: selector,
+        applySelector,
+        variantPrefix: `${variant}:`,
+        canApply: true,
+        preserveOriginalClass: true,
+        warning:
+          "Descendant selector was applied to currently matched elements. Review if this relationship is dynamic.",
+      };
+    }
   }
 
   const pseudoClassSelector = new RegExp(
@@ -701,6 +740,40 @@ const expandTransitionShorthand = (value: string) => {
   return Object.keys(expanded).length > 0 ? expanded : null;
 };
 
+const expandListStyleShorthand = (value: string) => {
+  const values = splitCssValue(value);
+  if (values.length !== 1) return null;
+
+  const normalizedValue = values[0].toLowerCase();
+  if (["none", "disc", "decimal"].includes(normalizedValue)) {
+    return {
+      "list-style-type": normalizedValue,
+    };
+  }
+
+  if (["inside", "outside"].includes(normalizedValue)) {
+    return {
+      "list-style-position": normalizedValue,
+    };
+  }
+
+  return null;
+};
+
+const expandTextDecorationShorthand = (value: string) => {
+  const values = splitCssValue(value);
+  if (values.length !== 1) return null;
+
+  const normalizedValue = values[0].toLowerCase();
+  if (["none", "underline", "overline", "line-through"].includes(normalizedValue)) {
+    return {
+      "text-decoration-line": normalizedValue,
+    };
+  }
+
+  return null;
+};
+
 const normalizeDeclarations = (
   declarations: Declaration[]
 ): NormalizedDeclarations => {
@@ -770,6 +843,28 @@ const normalizeDeclarations = (
 
     if (declaration.prop === "transition") {
       const expanded = expandTransitionShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "list-style") {
+      const expanded = expandListStyleShorthand(declaration.value);
+      if (expanded) {
+        Object.assign(style, expanded);
+      } else {
+        style[declaration.prop] = declaration.value;
+        preservedDeclarations.push(declaration);
+      }
+      return;
+    }
+
+    if (declaration.prop === "text-decoration") {
+      const expanded = expandTextDecorationShorthand(declaration.value);
       if (expanded) {
         Object.assign(style, expanded);
       } else {
@@ -880,6 +975,20 @@ export const cssToTailwindRules = (
     }
   });
 
+  const selectorsNeededByDescendants = new Set<string>();
+  root.walkRules((rule: Rule) => {
+    splitSelectorList(rule.selector).forEach((selector) => {
+      const selectorAnalysis = analyzeSelector(selector);
+      const descendantParts = getSimpleDescendantParts(
+        selectorAnalysis.applySelector
+      );
+
+      descendantParts?.slice(0, -1).forEach((part) => {
+        if (part.startsWith(".")) selectorsNeededByDescendants.add(part);
+      });
+    });
+  });
+
   root.walkRules((rule: Rule) => {
     const ruleAtRules: string[] = [];
     let parent = rule.parent;
@@ -988,10 +1097,12 @@ export const cssToTailwindRules = (
               "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
           })
         : selectorAnalysis.warning
-          ? getUnsupportedMessage({
-              category: preserveCategory,
-              fallbackMessage: selectorAnalysis.warning,
-            })
+          ? canApply
+            ? selectorAnalysis.warning
+            : getUnsupportedMessage({
+                category: preserveCategory,
+                fallbackMessage: selectorAnalysis.warning,
+              })
           : "This rule is preserved for review.";
 
       if (selectorAnalysis.warning) {
@@ -1023,7 +1134,10 @@ export const cssToTailwindRules = (
       }
 
       const preserveOriginalClass =
-        !canApply || unsupportedDeclarations.length > 0;
+        Boolean(selectorAnalysis.preserveOriginalClass) ||
+        selectorsNeededByDescendants.has(selectorAnalysis.applySelector) ||
+        !canApply ||
+        unsupportedDeclarations.length > 0;
       const classNames = declarationsResult
         .filter((item) => canApply && item.className)
         .map((item) => {
@@ -1075,6 +1189,126 @@ export const validValue = (value: string) => {
   return value.includes("px") || value.includes("rem") ? true : false;
 };
 
+const spacingClassPattern = /^((?:[\w-]+:)*)?(-?)([mp])([trbl]?)-(.+)$/;
+
+const classForSpacing = (
+  variantPrefix: string,
+  negativePrefix: string,
+  property: "m" | "p",
+  direction: "" | "x" | "y" | "t" | "r" | "b" | "l",
+  value: string
+) => `${variantPrefix}${negativePrefix}${property}${direction}-${value}`;
+
+const consolidateSpacingClasses = (classes: string[]) => {
+  const result = [...classes];
+  const groups = new Map<
+    string,
+    {
+      variantPrefix: string;
+      negativePrefix: string;
+      property: "m" | "p";
+      directions: Partial<Record<"t" | "r" | "b" | "l", { value: string; index: number }>>;
+      hasShorthand: boolean;
+    }
+  >();
+
+  classes.forEach((className, index) => {
+    const match = className.match(spacingClassPattern);
+    if (!match) return;
+
+    const [, variantPrefix = "", negativePrefix, property, direction, value] =
+      match as [
+        string,
+        string | undefined,
+        string,
+        "m" | "p",
+        "" | "t" | "r" | "b" | "l",
+        string,
+      ];
+    const key = `${variantPrefix}|${negativePrefix}|${property}`;
+    const group = groups.get(key) ?? {
+      variantPrefix,
+      negativePrefix,
+      property,
+      directions: {},
+      hasShorthand: false,
+    };
+
+    if (direction === "") {
+      group.hasShorthand = true;
+    } else {
+      group.directions[direction] = { value, index };
+    }
+
+    groups.set(key, group);
+  });
+
+  groups.forEach((group) => {
+    if (group.hasShorthand) return;
+
+    const { t, r, b, l } = group.directions;
+    const replacements: Array<{
+      indices: number[];
+      className: string;
+      insertIndex: number;
+    }> = [];
+
+    if (t && r && b && l && t.value === r.value && t.value === b.value && t.value === l.value) {
+      replacements.push({
+        indices: [t.index, r.index, b.index, l.index],
+        className: classForSpacing(
+          group.variantPrefix,
+          group.negativePrefix,
+          group.property,
+          "",
+          t.value
+        ),
+        insertIndex: Math.min(t.index, r.index, b.index, l.index),
+      });
+    } else {
+      if (t && b && t.value === b.value) {
+        replacements.push({
+          indices: [t.index, b.index],
+          className: classForSpacing(
+            group.variantPrefix,
+            group.negativePrefix,
+            group.property,
+            "y",
+            t.value
+          ),
+          insertIndex: Math.min(t.index, b.index),
+        });
+      }
+
+      if (r && l && r.value === l.value) {
+        replacements.push({
+          indices: [r.index, l.index],
+          className: classForSpacing(
+            group.variantPrefix,
+            group.negativePrefix,
+            group.property,
+            "x",
+            r.value
+          ),
+          insertIndex: Math.min(r.index, l.index),
+        });
+      }
+    }
+
+    replacements.forEach(({ indices, className, insertIndex }) => {
+      indices.forEach((index) => {
+        result[index] = "";
+      });
+      result[insertIndex] = className;
+    });
+  });
+
+  return result.filter(Boolean);
+};
+
+const normalizeClassList = (classes: string[]) =>
+  consolidateSpacingClasses(Array.from(new Set(classes)));
+
 interface ClassObject {
   [selector: string]:
     | string
@@ -1112,16 +1346,17 @@ export const parser = (html: string, classObjects: ClassObject[]) => {
                 const newClasses = originalClasses.map((cls) =>
                   cls === selector.substring(1) ? tailwindClasses : cls
                 );
-                element.className = newClasses.join(" ");
+                element.className = normalizeClassList(newClasses).join(" ");
               } else {
                 // Tag-based selectors add classes; preserved class selectors keep leftovers working.
                 const currentClasses = element.className
                   .split(" ")
                   .filter(Boolean);
                 const newClasses = tailwindClasses.split(" ").filter(Boolean);
-                const mergedClasses = Array.from(
-                  new Set([...currentClasses, ...newClasses])
-                );
+                const mergedClasses = normalizeClassList([
+                  ...currentClasses,
+                  ...newClasses,
+                ]);
                 element.className = mergedClasses.join(" ");
               }
             });
@@ -1163,7 +1398,7 @@ export const convertHtmlCss = (
       ];
 
       classesBySelector.set(rule.selector, {
-        classes: Array.from(new Set(classes)).join(" "),
+        classes: normalizeClassList(classes).join(" "),
         preserveOriginalClass:
           Boolean(existing?.preserveOriginalClass) || rule.preserveOriginalClass,
       });

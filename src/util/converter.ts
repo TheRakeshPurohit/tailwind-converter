@@ -161,6 +161,12 @@ const gridTemplateClassFor = (property: string, value: string) => {
     if (count >= 1 && count <= 12) return `${prefix}-${count}`;
   }
 
+  const repeatFrMatch = normalized.match(/^repeat\(\s*(\d+)\s*,\s*1fr\s*\)$/);
+  if (repeatFrMatch) {
+    const count = Number(repeatFrMatch[1]);
+    if (count >= 1 && count <= 12) return `${prefix}-${count}`;
+  }
+
   return "";
 };
 
@@ -748,7 +754,7 @@ export const convertAttributesDetailed = (
         }
       }
     }
-    if (tailwindValue !== "") {
+    if (tailwindValue !== "" && tailwindValue !== undefined) {
       if (negativeValue) abbreviation = "-" + abbreviation;
       const className = abbreviation
         ? (abbreviation += "-" + tailwindValue)

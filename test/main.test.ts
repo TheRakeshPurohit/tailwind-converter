@@ -398,6 +398,38 @@ test("warns before flattening complex selectors", () => {
   expect(result.leftoverCss).toContain(".card > h2");
 });
 
+test("applies simple descendant selectors to matched elements", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="hero-content"><p>Lead copy</p></div></body></html>`,
+    `.hero-content p { color: red; margin-bottom: 1rem; }`
+  );
+
+  expect(result.html).toContain('<p class="text-red-600 mb-4">Lead copy</p>');
+  expect(result.leftoverCss).toBe("");
+  expect([...result.converted, ...result.approximated]).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".hero-content p",
+        property: "color",
+        className: "text-red-600",
+      }),
+      expect.objectContaining({
+        selector: ".hero-content p",
+        property: "margin-bottom",
+        className: "mb-4",
+      }),
+    ])
+  );
+  expect(result.warnings).toEqual([
+    {
+      selector: ".hero-content p",
+      category: "relationship-based",
+      message:
+        "Descendant selector was applied to currently matched elements. Review if this relationship is dynamic.",
+    },
+  ]);
+});
+
 test("splits safe comma selectors", () => {
   const result = convertHtmlCss(
     `<html><body><h1>One</h1><h2>Two</h2></body></html>`,
@@ -419,23 +451,23 @@ test("expands margin shorthand into longhand Tailwind classes", () => {
   expect(result.leftoverCss).toBe("");
 });
 
-test("expands two-value padding shorthand into longhand Tailwind classes", () => {
+test("consolidates two-value padding shorthand into axis Tailwind classes", () => {
   const result = convertHtmlCss(
     `<html><body><section class="panel">Panel</section></body></html>`,
     `.panel { padding: 8px 16px; }`
   );
 
-  expect(result.html).toContain('class="pt-2 pr-4 pb-2 pl-4"');
+  expect(result.html).toContain('class="py-2 px-4"');
   expect(result.leftoverCss).toBe("");
 });
 
-test("converts auto margin shorthand pieces", () => {
+test("consolidates auto margin shorthand pieces", () => {
   const result = convertHtmlCss(
     `<html><body><div class="box">Box</div></body></html>`,
     `.box { margin: auto 2rem; }`
   );
 
-  expect(result.html).toContain('class="mt-auto mr-8 mb-auto ml-8"');
+  expect(result.html).toContain('class="my-auto mx-8"');
   expect(result.leftoverCss).toBe("");
   expect(result.converted).toEqual(
     expect.arrayContaining([

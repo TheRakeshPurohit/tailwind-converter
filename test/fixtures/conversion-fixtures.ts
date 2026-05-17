@@ -27,6 +27,200 @@ export type ConversionFixture = {
 
 export const conversionFixtures: ConversionFixture[] = [
   {
+    name: "simple landing page converts common global, layout, and descendant styles",
+    html: `
+      <header class="navbar">
+        <h1 class="logo">MySite</h1>
+        <nav>
+          <ul class="nav-links">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Features</a></li>
+            <li><a href="#">Pricing</a></li>
+          </ul>
+        </nav>
+        <button class="login-btn">Login</button>
+      </header>
+
+      <section class="hero">
+        <div class="hero-content">
+          <h2>Build something amazing</h2>
+          <p>Create modern websites faster with clean design and responsive layouts.</p>
+          <div class="button-group">
+            <button class="primary-btn">Get Started</button>
+            <button class="secondary-btn">Learn More</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dashboard Preview</h3>
+          <div class="stats-grid">
+            <div class="stat-box"><span>Users</span><strong>12k</strong></div>
+            <div class="stat-box"><span>Revenue</span><strong>$24k</strong></div>
+            <div class="stat-box"><span>Growth</span><strong>18%</strong></div>
+            <div class="stat-box"><span>Retention</span><strong>91%</strong></div>
+          </div>
+        </div>
+      </section>
+    `,
+    css: `
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f7fb;
+        color: #222;
+      }
+
+      .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 50px;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+      }
+
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 24px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: #444;
+      }
+
+      .nav-links a:hover {
+        color: #2563eb;
+      }
+
+      .login-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+      }
+
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 80px auto;
+        padding: 0 40px;
+        gap: 50px;
+      }
+
+      .hero-content {
+        flex: 1;
+      }
+
+      .hero-content h2 {
+        font-size: 56px;
+        margin-bottom: 20px;
+      }
+
+      .hero-content p {
+        font-size: 18px;
+        line-height: 1.7;
+        color: #666;
+        margin-bottom: 30px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 16px;
+      }
+
+      .primary-btn {
+        padding: 14px 24px;
+        background: #2563eb;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      .secondary-btn {
+        padding: 14px 24px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      .card {
+        flex: 1;
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, .08);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .stat-box {
+        background: #f4f6fa;
+        padding: 20px;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .stat-box strong {
+        font-size: 28px;
+      }
+    `,
+    expected: {
+      htmlIncludes: [
+        '<body class="m-0 p-0',
+        'class="text-2xl font-bold"',
+        'class="nav-links flex gap-6 list-none"',
+        'class="no-underline text-neutral-700 hover:text-blue-600"',
+        'class="flex justify-between items-center max-w-6xl my-20 mx-auto py-0 px-10',
+        'class="hero-content flex-1"',
+        '<h2 class="text-6xl mb-5">Build something amazing</h2>',
+        '<p class="text-lg leading-7 text-stone-500 mb-7">',
+        'class="grid grid-cols-2 gap-5 mt-5"',
+        'class="stat-box bg-slate-100 p-5 rounded-xl flex flex-col gap-2"',
+        '<strong class="text-3xl">12k</strong>',
+      ],
+      leftoverExcludes: [
+        "body {",
+        ".hero-content p",
+        ".stat-box strong",
+      ],
+      converted: [
+        { selector: "body", property: "margin", className: "m-0" },
+        { selector: ".logo", property: "font-weight", className: "font-bold" },
+        { selector: ".hero", property: "margin-right", className: "mr-auto" },
+        { selector: ".hero", property: "margin-left", className: "ml-auto" },
+      ],
+      warnings: [
+        { selector: ".nav-links a", category: "relationship-based" },
+        { selector: ".nav-links a:hover", category: "relationship-based" },
+        { selector: ".hero-content h2", category: "relationship-based" },
+        { selector: ".hero-content p", category: "relationship-based" },
+        { selector: ".stat-box strong", category: "relationship-based" },
+      ],
+    },
+  },
+  {
     name: "card with typography, action styles, hover state, and approximated shadow",
     html: `
       <section class="hero">
@@ -92,10 +286,10 @@ export const conversionFixtures: ConversionFixture[] = [
     expected: {
       htmlIncludes: [
         'class="p-8 bg-white"',
-        "mt-0 mr-auto mb-0 ml-auto",
+        "my-0 mx-auto",
         "shadow-lg",
         "italic font-bold text-3xl",
-        "inline-block pt-2 pr-4 pb-2 pl-4",
+        "inline-block py-2 px-4",
         "transition-colors ease-out duration-200",
         "grid grid-cols-3 gap-4",
         "hover:bg-blue-700",
