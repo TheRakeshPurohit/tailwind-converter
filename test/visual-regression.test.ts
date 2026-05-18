@@ -297,6 +297,81 @@ const visualCases: VisualRegressionCase[] = [
     maxMismatchRatio: 0.08,
   },
   {
+    name: "navigation header with descendants",
+    html: `
+      <header class="site-header">
+        <a class="brand" href="#">Northstar</a>
+        <nav class="nav">
+          <ul class="nav-list">
+            <li><a href="#">Product</a></li>
+            <li><a href="#">Docs</a></li>
+            <li><a href="#">Pricing</a></li>
+          </ul>
+        </nav>
+        <a class="account-link" href="#">Sign in</a>
+      </header>
+    `,
+    css: `
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: #111827;
+      }
+
+      .site-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-width: 0;
+        padding: 16px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        overflow: hidden;
+      }
+
+      .brand {
+        flex: 1;
+        color: #111827;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.025em;
+        text-decoration: none;
+      }
+
+      .nav-list {
+        display: flex;
+        gap: 20px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .nav-list a {
+        color: #4b5563;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .nav-list a:hover {
+        color: #2563eb;
+      }
+
+      .account-link {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        color: #111827;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+    `,
+    maxMismatchRatio: 0.08,
+  },
+  {
     name: "preserved unsupported animation does not distort layout",
     html: `
       <section class="notice">

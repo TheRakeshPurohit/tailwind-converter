@@ -178,6 +178,10 @@ const staticUtilities: { [utility: string]: string } = {
   "break-all": "word-break: break-all;",
   "break-keep": "word-break: keep-all;",
   border: "border-width: 1px;",
+  "border-t": "border-top-width: 1px;",
+  "border-r": "border-right-width: 1px;",
+  "border-b": "border-bottom-width: 1px;",
+  "border-l": "border-left-width: 1px;",
   "border-0": "border-width: 0;",
   "border-2": "border-width: 2px;",
   "border-4": "border-width: 4px;",
@@ -347,6 +351,20 @@ const isArbitraryColorValue = (value: string) => {
 
 const declarationsForUtility = (utility: string) => {
   if (staticUtilities[utility]) return staticUtilities[utility];
+
+  const arbitrarySideBorderWidth = utility.match(
+    /^border-([trbl])-\[(.+)\]$/
+  );
+  if (arbitrarySideBorderWidth) {
+    const [, side, value] = arbitrarySideBorderWidth;
+    const sides: { [side: string]: string } = {
+      t: "top",
+      r: "right",
+      b: "bottom",
+      l: "left",
+    };
+    return `border-${sides[side]}-width: ${arbitraryValue(value)};`;
+  }
 
   const arbitraryMatch = utility.match(/^([a-z-]+)-\[(.+)\]$/);
   if (arbitraryMatch) {

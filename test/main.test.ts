@@ -868,7 +868,7 @@ test("escapes style closing tags in preview css", () => {
 
 test("generates scriptless preview css for common Tailwind classes", () => {
   const result = generatePreviewCss(
-    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[17px] bg-white border border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
+    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[17px] bg-white border border-b border-b-[3px] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
   );
 
   expect(result).toContain(".m-4{margin: 1rem;}");
@@ -887,6 +887,10 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(".text-\\[17px\\]{font-size: 17px;}");
   expect(result).toContain(".bg-white{background-color: #ffffff;}");
   expect(result).toContain(".border{border-width: 1px;}");
+  expect(result).toContain(".border-b{border-bottom-width: 1px;}");
+  expect(result).toContain(
+    ".border-b-\\[3px\\]{border-bottom-width: 3px;}"
+  );
   expect(result).toContain(".rounded-md{border-radius: 0.375rem;}");
   expect(result).toContain(".rounded-\\[7px\\]{border-radius: 7px;}");
   expect(result).toContain(
