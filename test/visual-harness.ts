@@ -54,17 +54,37 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+const escapeAttributeValue = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+
+const isSafeBodyAttribute = (name: string) =>
+  name === "class" ||
+  name === "id" ||
+  name.startsWith("data-") ||
+  name.startsWith("aria-");
+
+const serializeAttributes = (element: Element) =>
+  Array.from(element.attributes)
+    .filter((attribute) => isSafeBodyAttribute(attribute.name.toLowerCase()))
+    .map(
+      (attribute) =>
+        `${attribute.name}="${escapeAttributeValue(attribute.value)}"`
+    )
+    .join(" ");
+
 const extractDocumentParts = (html: string) => {
   const parsed = new DOMParser().parseFromString(html, "text/html");
+  const bodyAttributes = serializeAttributes(parsed.body);
 
   return {
-    head: parsed.head.innerHTML,
-    body: parsed.body.innerHTML,
+    head: sanitizePreviewHtml(parsed.head.innerHTML),
+    bodyAttributes: bodyAttributes ? ` ${bodyAttributes}` : "",
+    body: sanitizePreviewHtml(parsed.body.innerHTML),
   };
 };
 
 const buildOriginalDocument = (html: string, css: string) => {
-  const { head, body } = extractDocumentParts(sanitizePreviewHtml(html));
+  const { head, body, bodyAttributes } = extractDocumentParts(html);
 
   return `<!doctype html>
 <html>
@@ -74,14 +94,13 @@ const buildOriginalDocument = (html: string, css: string) => {
 ${head}
 <style>${sanitizePreviewCss(css)}</style>
 </head>
-<body>${body}</body>
+<body${bodyAttributes}>${body}</body>
 </html>`;
 };
 
 const buildConvertedDocument = (html: string) => {
-  const sanitizedHtml = sanitizePreviewHtml(html);
-  const { head, body } = extractDocumentParts(sanitizedHtml);
-  const generatedCss = sanitizePreviewCss(generatePreviewCss(sanitizedHtml));
+  const { head, body, bodyAttributes } = extractDocumentParts(html);
+  const generatedCss = sanitizePreviewCss(generatePreviewCss(html));
 
   return `<!doctype html>
 <html>
@@ -91,7 +110,7 @@ const buildConvertedDocument = (html: string) => {
 ${head}
 <style>${generatedCss}</style>
 </head>
-<body>${body}</body>
+<body${bodyAttributes}>${body}</body>
 </html>`;
 };
 

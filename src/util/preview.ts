@@ -219,6 +219,19 @@ const arbitraryValue = (value: string) => {
   return value.replace(/\\,/g, ",").replace(/_/g, " ");
 };
 
+const isArbitraryColorValue = (value: string) => {
+  const normalizedValue = value.trim().toLowerCase();
+
+  return (
+    normalizedValue.startsWith("#") ||
+    /^rgba?\(/.test(normalizedValue) ||
+    /^hsla?\(/.test(normalizedValue) ||
+    normalizedValue.startsWith("color(") ||
+    normalizedValue.startsWith("oklab(") ||
+    normalizedValue.startsWith("oklch(")
+  );
+};
+
 const declarationsForUtility = (utility: string) => {
   if (staticUtilities[utility]) return staticUtilities[utility];
 
@@ -241,7 +254,7 @@ const declarationsForUtility = (utility: string) => {
       h: "height",
       "max-w": "max-width",
       "max-h": "max-height",
-      text: "font-size",
+      text: isArbitraryColorValue(cssValue) ? "color" : "font-size",
       leading: "line-height",
       transition: "transition-property",
       duration: "transition-duration",
