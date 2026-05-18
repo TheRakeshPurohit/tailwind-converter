@@ -147,6 +147,15 @@ const staticUtilities: { [utility: string]: string } = {
   "border-dotted": "border-style: dotted;",
   "border-double": "border-style: double;",
   "border-none": "border-style: none;",
+  "rounded-none": "border-radius: 0;",
+  "rounded-sm": "border-radius: 0.125rem;",
+  rounded: "border-radius: 0.25rem;",
+  "rounded-md": "border-radius: 0.375rem;",
+  "rounded-lg": "border-radius: 0.5rem;",
+  "rounded-xl": "border-radius: 0.75rem;",
+  "rounded-2xl": "border-radius: 1rem;",
+  "rounded-3xl": "border-radius: 1.5rem;",
+  "rounded-full": "border-radius: 9999px;",
   "grid-cols-none": "grid-template-columns: none;",
   "grid-cols-subgrid": "grid-template-columns: subgrid;",
   "grid-rows-none": "grid-template-rows: none;",
@@ -275,7 +284,7 @@ const declarationsForUtility = (utility: string) => {
   }
 
   const spacingMatch = utility.match(
-    /^(m|mt|mr|mb|ml|p|pt|pr|pb|pl|w|h|max-w|max-h|gap|gap-x|gap-y)-(.+)$/
+    /^(m|mx|my|mt|mr|mb|ml|p|px|py|pt|pr|pb|pl|w|h|max-w|max-h|gap|gap-x|gap-y)-(.+)$/
   );
   if (spacingMatch) {
     const [, prefix, value] = spacingMatch;
@@ -283,11 +292,15 @@ const declarationsForUtility = (utility: string) => {
     if (!cssValue) return "";
     const properties: { [prefix: string]: string[] } = {
       m: ["margin"],
+      mx: ["margin-left", "margin-right"],
+      my: ["margin-top", "margin-bottom"],
       mt: ["margin-top"],
       mr: ["margin-right"],
       mb: ["margin-bottom"],
       ml: ["margin-left"],
       p: ["padding"],
+      px: ["padding-left", "padding-right"],
+      py: ["padding-top", "padding-bottom"],
       pt: ["padding-top"],
       pr: ["padding-right"],
       pb: ["padding-bottom"],
