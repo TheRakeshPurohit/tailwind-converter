@@ -6,6 +6,7 @@ import {
 } from "./converter";
 import DOMPurify from "dompurify";
 import postcss, { AtRule, Declaration, Rule } from "postcss";
+import valueParser from "postcss-value-parser";
 
 export const initialHTML = `<html lang="en">
 <body>
@@ -427,38 +428,30 @@ const appendLeftover = (
 const splitCssValue = (value: string) => {
   const parts: string[] = [];
   let current = "";
-  let parenDepth = 0;
-  let quote: string | null = null;
 
-  for (const character of value.trim()) {
-    if (quote) {
-      current += character;
-      if (character === quote) quote = null;
-      continue;
-    }
-
-    if (character === '"' || character === "'") {
-      quote = character;
-      current += character;
-      continue;
-    }
-
-    if (character === "(") parenDepth += 1;
-    if (character === ")") parenDepth -= 1;
-
-    if (/\s/.test(character) && parenDepth === 0) {
+  valueParser(value).nodes.forEach((node) => {
+    if (node.type === "space") {
       if (current) {
         parts.push(current);
         current = "";
       }
+    } else if (node.type === "div" && node.value === "/") {
+      if (current) {
+        parts.push(current);
+        current = "";
+      }
+      parts.push("/");
     } else {
-      current += character;
+      current += valueParser.stringify(node);
     }
-  }
+  });
 
   if (current) parts.push(current);
   return parts;
 };
+
+const hasTopLevelComma = (value: string) =>
+  valueParser(value).nodes.some((node) => node.type === "div" && node.value === ",");
 
 const expandBoxShorthand = (property: "margin" | "padding", value: string) => {
   const values = splitCssValue(value);
@@ -536,6 +529,7 @@ const colorKeywords = new Set([
 const isLengthValue = (value: string) =>
   value === "0" ||
   /^-?\d*\.?\d+(px|rem|em|%)$/.test(value) ||
+  value.startsWith("calc(") ||
   borderWidthKeywords[value] !== undefined;
 
 const isColorValue = (value: string) =>
@@ -689,7 +683,15 @@ const expandFontShorthand = (value: string) => {
 
   if (fontSizeIndex === -1 || fontSizeIndex === values.length - 1) return null;
 
-  expanded["font-family"] = values.slice(fontSizeIndex + 1).join(" ");
+  const familyStartIndex =
+    values[fontSizeIndex + 1] === "/" ? fontSizeIndex + 3 : fontSizeIndex + 1;
+  const spacedLineHeight = values[fontSizeIndex + 2];
+  if (values[fontSizeIndex + 1] === "/" && spacedLineHeight) {
+    expanded["line-height"] = spacedLineHeight;
+  }
+  if (familyStartIndex > values.length - 1) return null;
+
+  expanded["font-family"] = values.slice(familyStartIndex).join(" ");
   return expanded;
 };
 
@@ -700,7 +702,7 @@ const isTransitionTiming = (value: string) =>
   value.startsWith("cubic-bezier(");
 
 const expandTransitionShorthand = (value: string) => {
-  if (value.includes(",")) return null;
+  if (hasTopLevelComma(value)) return null;
 
   const values = splitCssValue(value);
   if (values.length === 0) return null;

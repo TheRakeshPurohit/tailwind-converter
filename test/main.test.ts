@@ -313,6 +313,18 @@ test("expands conservative transition shorthand", () => {
   expect(result.leftoverCss).toBe("");
 });
 
+test("expands transition shorthand with parser-preserved timing functions", () => {
+  const result = convertHtmlCss(
+    `<html><body><button class="cta">Buy</button></body></html>`,
+    `.cta { transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1) 75ms; }`
+  );
+
+  expect(result.html).toContain(
+    'class="transition-opacity ease-in-out duration-200 delay-75"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
 test("preserves unsupported multi-transition shorthand", () => {
   const result = convertHtmlCss(
     `<html><body><button class="cta">Buy</button></body></html>`,
@@ -521,6 +533,46 @@ test("consolidates auto margin shorthand pieces", () => {
   );
 });
 
+test("keeps css functions intact when expanding exact spacing shorthands", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero {
+      margin: calc(100% - 2rem) auto;
+      padding: clamp(1rem, 2vw, 2rem) 24px;
+    }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="my-[calc(100%_-_2rem)] mx-auto py-[clamp(1rem\\,_2vw\\,_2rem)] px-[24px]"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".hero",
+        property: "margin-top",
+        className: "mt-[calc(100%_-_2rem)]",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "margin-right",
+        className: "mr-auto",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "padding-top",
+        className: "pt-[clamp(1rem\\,_2vw\\,_2rem)]",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "padding-right",
+        className: "pr-[24px]",
+      }),
+    ])
+  );
+});
+
 test("expands border shorthand into width style and color classes", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
@@ -539,6 +591,19 @@ test("expands border side shorthand", () => {
 
   expect(result.html).toContain(
     'class="border-t-2 border-dashed border-t-blue-700"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("keeps functional border widths intact in exact border shorthands", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { border-top: calc(1px + 1px) solid red; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="border-t-[calc(1px_+_1px)] border-solid border-t-red-600"'
   );
   expect(result.leftoverCss).toBe("");
 });
@@ -682,6 +747,18 @@ test("expands rem font shorthand", () => {
   );
 
   expect(result.html).toContain('class="text-xl font-serif"');
+  expect(result.leftoverCss).toBe("");
+});
+
+test("expands font shorthand with spaced line-height slash", () => {
+  const result = convertHtmlCss(
+    `<html><body><p class="lead">Lead</p></body></html>`,
+    `.lead { font: italic 700 16px / 1.5 "Inter", sans-serif; }`
+  );
+
+  expect(result.html).toContain(
+    'class="italic font-bold text-base leading-normal font-sans"'
+  );
   expect(result.leftoverCss).toBe("");
 });
 

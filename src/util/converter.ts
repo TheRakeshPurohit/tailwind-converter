@@ -755,7 +755,7 @@ export const convertAttributesDetailed = (
       }
     }
     if (tailwindValue !== "" && tailwindValue !== undefined) {
-      if (negativeValue) abbreviation = "-" + abbreviation;
+      if (negativeValue && abbreviation) abbreviation = "-" + abbreviation;
       const className = abbreviation
         ? (abbreviation += "-" + tailwindValue)
         : String(tailwindValue);
