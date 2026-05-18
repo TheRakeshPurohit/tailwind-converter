@@ -4,6 +4,7 @@ import {
   launchVisualRegressionBrowser,
   runVisualRegressionCase,
   type VisualRegressionCase,
+  type VisualRegressionResult,
 } from "./visual-harness";
 
 const visualCases: VisualRegressionCase[] = [
@@ -395,6 +396,66 @@ const visualCases: VisualRegressionCase[] = [
 
 describe("visual regression harness", () => {
   let browser: Browser;
+  const visualResults: Array<{
+    result: VisualRegressionResult;
+    maxMismatchRatio: number;
+  }> = [];
+
+  const percent = (ratio: number) => `${(ratio * 100).toFixed(2)}%`;
+
+  const logVisualSummary = () => {
+    if (visualResults.length === 0) return;
+
+    const averageMismatch =
+      visualResults.reduce(
+        (total, { result }) => total + result.mismatchRatio,
+        0
+      ) / visualResults.length;
+    const worst = visualResults.reduce((currentWorst, entry) =>
+      entry.result.mismatchRatio > currentWorst.result.mismatchRatio
+        ? entry
+        : currentWorst
+    );
+    const resultsByCase = visualResults.reduce(
+      (groups, entry) => {
+        const current = groups.get(entry.result.name) ?? [];
+        current.push(entry);
+        groups.set(entry.result.name, current);
+        return groups;
+      },
+      new Map<string, typeof visualResults>()
+    );
+    const caseLines = Array.from(resultsByCase.entries()).map(
+      ([name, entries]) => {
+        const mismatch =
+          entries.reduce(
+            (total, { result }) => total + result.mismatchRatio,
+            0
+          ) / entries.length;
+        const viewportSummary = entries
+          .map(
+            ({ result }) =>
+              `${result.viewport.name} ${percent(result.mismatchRatio)}`
+          )
+          .join(", ");
+
+        return `  - ${name}: ${percent(1 - mismatch)} accuracy (${viewportSummary})`;
+      }
+    );
+
+    console.log(
+      [
+        "",
+        "Visual regression summary",
+        `Overall accuracy: ${percent(1 - averageMismatch)} across ${visualResults.length} viewport snapshots`,
+        `Worst result: ${worst.result.name} / ${worst.result.viewport.name} at ${percent(worst.result.accuracy)} accuracy`,
+        `Worst budget: ${percent(worst.maxMismatchRatio)} max mismatch, actual ${percent(worst.result.mismatchRatio)}`,
+        `Worst artifacts: ${worst.result.artifacts.diff}`,
+        ...caseLines,
+        "",
+      ].join("\n")
+    );
+  };
 
   beforeAll(async () => {
     browser = await launchVisualRegressionBrowser();
@@ -402,6 +463,7 @@ describe("visual regression harness", () => {
 
   afterAll(async () => {
     await browser?.close();
+    logVisualSummary();
   });
 
   test.each(visualCases)(
@@ -409,6 +471,10 @@ describe("visual regression harness", () => {
     async (visualCase) => {
       const { results } = await runVisualRegressionCase(browser, visualCase);
       const maxMismatchRatio = visualCase.maxMismatchRatio ?? 0.05;
+
+      results.forEach((result) => {
+        visualResults.push({ result, maxMismatchRatio });
+      });
 
       results.forEach((result) => {
         expect(
