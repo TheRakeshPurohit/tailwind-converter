@@ -932,3 +932,53 @@ test("generates scriptless preview css for arbitrary background images", () => {
     ".bg-\\[linear-gradient\\(to_right\\\\\\,_red\\\\\\,_blue\\)\\]{background-image: linear-gradient(to right, red, blue);}"
   );
 });
+
+test("generates scriptless preview css for common converter layout utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="flex-1 basis-1/2 min-w-0 min-h-screen max-w-6xl h-full top-4 z-10 order-first overflow-hidden list-none no-underline cursor-pointer appearance-none pointer-events-none select-none resize-y tracking-wide opacity-75"></section>`
+  );
+
+  expect(result).toContain(".flex-1{flex: 1 1 0%;}");
+  expect(result).toContain(".basis-1\\/2{flex-basis: 50%;}");
+  expect(result).toContain(".min-w-0{min-width: 0rem;}");
+  expect(result).toContain(".min-h-screen{min-height: 100vh;}");
+  expect(result).toContain(".max-w-6xl{max-width: 72rem;}");
+  expect(result).toContain(".h-full{height: 100%;}");
+  expect(result).toContain(".top-4{top: 1rem;}");
+  expect(result).toContain(".z-10{z-index: 10;}");
+  expect(result).toContain(".order-first{order: -9999;}");
+  expect(result).toContain(".overflow-hidden{overflow: hidden;}");
+  expect(result).toContain(".list-none{list-style-type: none;}");
+  expect(result).toContain(".no-underline{text-decoration-line: none;}");
+  expect(result).toContain(".cursor-pointer{cursor: pointer;}");
+  expect(result).toContain(".appearance-none{appearance: none;}");
+  expect(result).toContain(".pointer-events-none{pointer-events: none;}");
+  expect(result).toContain(".select-none{user-select: none;}");
+  expect(result).toContain(".resize-y{resize: vertical;}");
+  expect(result).toContain(".tracking-wide{letter-spacing: 0.025em;}");
+  expect(result).toContain(".opacity-75{opacity: 0.75;}");
+});
+
+test("generates scriptless preview css for exact axis and positioning utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="mx-[17px] py-[9px] gap-x-[11px] basis-[33%] top-[3px] z-[12] opacity-[.67] tracking-[0.02em] indent-[2rem]"></section>`
+  );
+
+  expect(result).toContain(
+    ".mx-\\[17px\\]{margin-inline: 17px;}"
+  );
+  expect(result).toContain(
+    ".py-\\[9px\\]{padding-block: 9px;}"
+  );
+  expect(result).toContain(
+    ".gap-x-\\[11px\\]{column-gap: 11px;}"
+  );
+  expect(result).toContain(".basis-\\[33\\%\\]{flex-basis: 33%;}");
+  expect(result).toContain(".top-\\[3px\\]{top: 3px;}");
+  expect(result).toContain(".z-\\[12\\]{z-index: 12;}");
+  expect(result).toContain(".opacity-\\[\\.67\\]{opacity: .67;}");
+  expect(result).toContain(
+    ".tracking-\\[0\\.02em\\]{letter-spacing: 0.02em;}"
+  );
+  expect(result).toContain(".indent-\\[2rem\\]{text-indent: 2rem;}");
+});

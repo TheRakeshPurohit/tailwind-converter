@@ -98,6 +98,10 @@ const staticUtilities: { [utility: string]: string } = {
   "flex-col-reverse": "flex-direction: column-reverse;",
   "flex-wrap": "flex-wrap: wrap;",
   "flex-nowrap": "flex-wrap: nowrap;",
+  "flex-1": "flex: 1 1 0%;",
+  "flex-auto": "flex: 1 1 auto;",
+  "flex-initial": "flex: 0 1 auto;",
+  "flex-none": "flex: none;",
   grow: "flex-grow: 1;",
   "grow-0": "flex-grow: 0;",
   shrink: "flex-shrink: 1;",
@@ -113,10 +117,36 @@ const staticUtilities: { [utility: string]: string } = {
   "items-center": "align-items: center;",
   "items-baseline": "align-items: baseline;",
   "items-stretch": "align-items: stretch;",
+  "list-none": "list-style-type: none;",
+  "list-disc": "list-style-type: disc;",
+  "list-decimal": "list-style-type: decimal;",
+  "list-inside": "list-style-position: inside;",
+  "list-outside": "list-style-position: outside;",
   "text-left": "text-align: left;",
   "text-center": "text-align: center;",
   "text-right": "text-align: right;",
   "text-justify": "text-align: justify;",
+  underline: "text-decoration-line: underline;",
+  overline: "text-decoration-line: overline;",
+  "line-through": "text-decoration-line: line-through;",
+  "no-underline": "text-decoration-line: none;",
+  uppercase: "text-transform: uppercase;",
+  lowercase: "text-transform: lowercase;",
+  capitalize: "text-transform: capitalize;",
+  "normal-case": "text-transform: none;",
+  "align-baseline": "vertical-align: baseline;",
+  "align-top": "vertical-align: top;",
+  "align-middle": "vertical-align: middle;",
+  "align-bottom": "vertical-align: bottom;",
+  "align-text-top": "vertical-align: text-top;",
+  "align-text-bottom": "vertical-align: text-bottom;",
+  "align-sub": "vertical-align: sub;",
+  "align-super": "vertical-align: super;",
+  "whitespace-normal": "white-space: normal;",
+  "whitespace-nowrap": "white-space: nowrap;",
+  "whitespace-pre": "white-space: pre;",
+  "whitespace-pre-line": "white-space: pre-line;",
+  "whitespace-pre-wrap": "white-space: pre-wrap;",
   italic: "font-style: italic;",
   "non-italic": "font-style: normal;",
   "font-thin": "font-weight: 100;",
@@ -137,6 +167,16 @@ const staticUtilities: { [utility: string]: string } = {
   "leading-normal": "line-height: 1.5;",
   "leading-relaxed": "line-height: 1.625;",
   "leading-loose": "line-height: 2;",
+  "tracking-tighter": "letter-spacing: -0.05em;",
+  "tracking-tight": "letter-spacing: -0.025em;",
+  "tracking-normal": "letter-spacing: 0em;",
+  "tracking-wide": "letter-spacing: 0.025em;",
+  "tracking-wider": "letter-spacing: 0.05em;",
+  "tracking-widest": "letter-spacing: 0.1em;",
+  "break-normal": "overflow-wrap: normal; word-break: normal;",
+  "break-words": "overflow-wrap: break-word;",
+  "break-all": "word-break: break-all;",
+  "break-keep": "word-break: keep-all;",
   border: "border-width: 1px;",
   "border-0": "border-width: 0;",
   "border-2": "border-width: 2px;",
@@ -156,6 +196,41 @@ const staticUtilities: { [utility: string]: string } = {
   "rounded-2xl": "border-radius: 1rem;",
   "rounded-3xl": "border-radius: 1.5rem;",
   "rounded-full": "border-radius: 9999px;",
+  "overflow-auto": "overflow: auto;",
+  "overflow-hidden": "overflow: hidden;",
+  "overflow-clip": "overflow: clip;",
+  "overflow-visible": "overflow: visible;",
+  "overflow-scroll": "overflow: scroll;",
+  "overflow-x-auto": "overflow-x: auto;",
+  "overflow-x-hidden": "overflow-x: hidden;",
+  "overflow-x-clip": "overflow-x: clip;",
+  "overflow-x-visible": "overflow-x: visible;",
+  "overflow-x-scroll": "overflow-x: scroll;",
+  "overflow-y-auto": "overflow-y: auto;",
+  "overflow-y-hidden": "overflow-y: hidden;",
+  "overflow-y-clip": "overflow-y: clip;",
+  "overflow-y-visible": "overflow-y: visible;",
+  "overflow-y-scroll": "overflow-y: scroll;",
+  visible: "visibility: visible;",
+  invisible: "visibility: hidden;",
+  "box-border": "box-sizing: border-box;",
+  "box-content": "box-sizing: content-box;",
+  "object-contain": "object-fit: contain;",
+  "object-cover": "object-fit: cover;",
+  "object-fill": "object-fit: fill;",
+  "object-none": "object-fit: none;",
+  "object-scale-down": "object-fit: scale-down;",
+  "appearance-none": "appearance: none;",
+  "pointer-events-none": "pointer-events: none;",
+  "pointer-events-auto": "pointer-events: auto;",
+  "select-none": "user-select: none;",
+  "select-text": "user-select: text;",
+  "select-all": "user-select: all;",
+  "select-auto": "user-select: auto;",
+  "resize-none": "resize: none;",
+  "resize-y": "resize: vertical;",
+  "resize-x": "resize: horizontal;",
+  resize: "resize: both;",
   "grid-cols-none": "grid-template-columns: none;",
   "grid-cols-subgrid": "grid-template-columns: subgrid;",
   "grid-rows-none": "grid-template-rows: none;",
@@ -216,12 +291,41 @@ const spacingValue = (value: string) => {
   if (value === "px") return "1px";
   if (value === "auto") return "auto";
   if (value === "full") return "100%";
+  if (value === "screen") return "100vh";
+  if (value === "min") return "min-content";
+  if (value === "max") return "max-content";
+  if (value === "fit") return "fit-content";
   if (/^\d+\/\d+$/.test(value)) {
     const [numerator, denominator] = value.split("/").map(Number);
     return `${(numerator / denominator) * 100}%`;
   }
   const number = Number(value);
   return Number.isNaN(number) ? "" : `${number / 4}rem`;
+};
+
+const maxWidthValues: { [value: string]: string } = {
+  "0": "0px",
+  xs: "20rem",
+  sm: "24rem",
+  md: "28rem",
+  lg: "32rem",
+  xl: "36rem",
+  "2xl": "42rem",
+  "3xl": "48rem",
+  "4xl": "56rem",
+  "5xl": "64rem",
+  "6xl": "72rem",
+  "7xl": "80rem",
+  none: "none",
+  full: "100%",
+  min: "min-content",
+  max: "max-content",
+  fit: "fit-content",
+};
+
+const sizeValue = (prefix: string, value: string) => {
+  if (prefix === "max-w" && maxWidthValues[value]) return maxWidthValues[value];
+  return spacingValue(value);
 };
 
 const arbitraryValue = (value: string) => {
@@ -254,15 +358,33 @@ const declarationsForUtility = (utility: string) => {
       mr: "margin-right",
       mb: "margin-bottom",
       ml: "margin-left",
+      mx: "margin-inline",
+      my: "margin-block",
       p: "padding",
       pt: "padding-top",
       pr: "padding-right",
       pb: "padding-bottom",
       pl: "padding-left",
+      px: "padding-inline",
+      py: "padding-block",
       w: "width",
       h: "height",
       "max-w": "max-width",
       "max-h": "max-height",
+      "min-w": "min-width",
+      "min-h": "min-height",
+      gap: "gap",
+      "gap-x": "column-gap",
+      "gap-y": "row-gap",
+      basis: "flex-basis",
+      top: "top",
+      right: "right",
+      bottom: "bottom",
+      left: "left",
+      z: "z-index",
+      opacity: "opacity",
+      tracking: "letter-spacing",
+      indent: "text-indent",
       text: isArbitraryColorValue(cssValue) ? "color" : "font-size",
       leading: "line-height",
       transition: "transition-property",
@@ -284,11 +406,11 @@ const declarationsForUtility = (utility: string) => {
   }
 
   const spacingMatch = utility.match(
-    /^(m|mx|my|mt|mr|mb|ml|p|px|py|pt|pr|pb|pl|w|h|max-w|max-h|gap|gap-x|gap-y)-(.+)$/
+    /^(m|mx|my|mt|mr|mb|ml|p|px|py|pt|pr|pb|pl|w|h|min-w|min-h|max-w|max-h|basis|top|right|bottom|left|gap|gap-x|gap-y)-(.+)$/
   );
   if (spacingMatch) {
     const [, prefix, value] = spacingMatch;
-    const cssValue = spacingValue(value);
+    const cssValue = sizeValue(prefix, value);
     if (!cssValue) return "";
     const properties: { [prefix: string]: string[] } = {
       m: ["margin"],
@@ -307,8 +429,15 @@ const declarationsForUtility = (utility: string) => {
       pl: ["padding-left"],
       w: ["width"],
       h: ["height"],
+      "min-w": ["min-width"],
+      "min-h": ["min-height"],
       "max-w": ["max-width"],
       "max-h": ["max-height"],
+      basis: ["flex-basis"],
+      top: ["top"],
+      right: ["right"],
+      bottom: ["bottom"],
+      left: ["left"],
       gap: ["gap"],
       "gap-x": ["column-gap"],
       "gap-y": ["row-gap"],
@@ -351,6 +480,22 @@ const declarationsForUtility = (utility: string) => {
 
   const opacityMatch = utility.match(/^opacity-(\d+)$/);
   if (opacityMatch) return `opacity: ${Number(opacityMatch[1]) / 100};`;
+
+  const zIndexMatch = utility.match(/^z-(auto|\d+)$/);
+  if (zIndexMatch) return `z-index: ${zIndexMatch[1]};`;
+
+  const orderMatch = utility.match(/^order-(first|last|none|\d+)$/);
+  if (orderMatch) {
+    const orderValues: { [value: string]: string } = {
+      first: "-9999",
+      last: "9999",
+      none: "0",
+    };
+    return `order: ${orderValues[orderMatch[1]] ?? orderMatch[1]};`;
+  }
+
+  const cursorMatch = utility.match(/^cursor-(.+)$/);
+  if (cursorMatch) return `cursor: ${cursorMatch[1]};`;
 
   const durationMatch = utility.match(/^(duration|delay)-(\d+)$/);
   if (durationMatch) {
