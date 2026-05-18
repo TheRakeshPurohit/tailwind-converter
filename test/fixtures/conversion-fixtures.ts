@@ -314,6 +314,54 @@ export const conversionFixtures: ConversionFixture[] = [
     },
   },
   {
+    name: "exact mode preserves landing page visual values",
+    mode: "exact",
+    html: `
+      <section class="hero">
+        <p class="lead">Create modern websites faster.</p>
+        <div class="card">Dashboard Preview</div>
+      </section>
+    `,
+    css: `
+      .hero {
+        margin: 80px auto;
+        padding: 0 40px;
+        background: #f5f7fb;
+      }
+
+      .lead {
+        color: #666;
+        line-height: 1.7;
+        margin-bottom: 30px;
+      }
+
+      .card {
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, .08);
+      }
+    `,
+    expected: {
+      htmlIncludes: [
+        'class="my-[80px] mx-auto py-0 px-[40px] bg-[#f5f7fb]"',
+        'class="text-[#666] leading-[1.7] mb-[30px]"',
+        'class="rounded-[20px] shadow-[0_15px_35px_rgba(0\\,_0\\,_0\\,_.08)]"',
+      ],
+      converted: [
+        { selector: ".hero", property: "margin-top", className: "mt-[80px]" },
+        { selector: ".hero", property: "margin-right", className: "mr-auto" },
+        { selector: ".hero", property: "padding-right", className: "pr-[40px]" },
+        { selector: ".lead", property: "color", className: "text-[#666]" },
+        { selector: ".lead", property: "line-height", className: "leading-[1.7]" },
+        { selector: ".card", property: "border-radius", className: "rounded-[20px]" },
+        {
+          selector: ".card",
+          property: "box-shadow",
+          className: "shadow-[0_15px_35px_rgba(0\\,_0\\,_0\\,_.08)]",
+        },
+      ],
+    },
+  },
+  {
     name: "responsive dashboard keeps supported breakpoints and preserves unsupported media",
     html: `
       <main class="dashboard">

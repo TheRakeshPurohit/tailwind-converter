@@ -370,6 +370,40 @@ test("can prefer exact arbitrary values for supported declarations", () => {
   );
 });
 
+test("uses exact spacing values while preserving native zero and auto tokens", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { margin: 80px auto; padding: 0 40px; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="my-[80px] mx-auto py-0 px-[40px]"');
+  expect(result.converted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".hero",
+        property: "margin-top",
+        className: "mt-[80px]",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "margin-right",
+        className: "mr-auto",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "padding-top",
+        className: "pt-0",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "padding-right",
+        className: "pr-[40px]",
+      }),
+    ])
+  );
+});
+
 test("converts safe pseudo-classes to Tailwind variants", () => {
   const result = convertHtmlCss(
     `<html><body><button class="cta">Buy</button></body></html>`,

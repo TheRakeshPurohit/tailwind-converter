@@ -97,7 +97,29 @@ npm run dev
 npm run build
 npm run lint
 npm run test
+npm run test:visual
 ```
+
+## Visual Regression Tests
+
+The visual regression harness renders original HTML/CSS and converted
+HTML/Tailwind output in Chromium, screenshots desktop/tablet/mobile viewports,
+and compares them with a pixel mismatch budget.
+
+Install the Playwright browser once:
+
+```bash
+npx playwright install chromium
+```
+
+Run the visual suite:
+
+```bash
+npm run test:visual
+```
+
+Screenshots and diffs are written to `test-artifacts/visual` for review and are
+ignored by git.
 
 ## Project Status
 

@@ -760,11 +760,12 @@ export const convertAttributesDetailed = (
         ? (abbreviation += "-" + tailwindValue)
         : String(tailwindValue);
       const exactClass = exactClassFor(style, originalValue);
-      const shouldUseExact = mode === "exact" && exactClass;
       const isExactSpacingToken =
         (originalValue.trim() === "0" && tailwindValue === 0) ||
         (originalValue.trim().toLowerCase() === "auto" &&
           tailwindValue === "auto");
+      const shouldUseExact =
+        mode === "exact" && exactClass && !isExactSpacingToken;
       const status =
         shouldUseExact || !exactClass || isExactSpacingToken
           ? "converted"
