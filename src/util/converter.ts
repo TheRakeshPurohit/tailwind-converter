@@ -31,6 +31,7 @@ import {
 import { get } from "lodash";
 import { getClosestValue, validValue } from "./helper";
 import { colorCodes } from "./colors";
+import valueParser, { FunctionNode } from "postcss-value-parser";
 // @ts-expect-error no types
 import NearestColor from "nearest-color";
 
@@ -323,6 +324,111 @@ const shadowClassFor = (value: string) => {
   return nearest.token?.className ?? "";
 };
 
+const numericValue = (value: string) => parseFloat(value.replace(/[^-.\d]/g, ""));
+
+const classWithSign = (prefix: string, value: string | number) => {
+  const stringValue = String(value);
+  if (stringValue.startsWith("-")) return `-${prefix}-${stringValue.slice(1)}`;
+  return `${prefix}-${stringValue}`;
+};
+
+const transformFunctionArguments = (node: FunctionNode) => {
+  const args: string[] = [];
+  let current = "";
+
+  node.nodes.forEach((child) => {
+    if (child.type === "space" || (child.type === "div" && child.value === ",")) {
+      if (current) {
+        args.push(current);
+        current = "";
+      }
+    } else {
+      current += valueParser.stringify(child);
+    }
+  });
+
+  if (current) args.push(current);
+  return args;
+};
+
+const translateClassFor = (prefix: "translate-x" | "translate-y", value: string) => {
+  const normalized = value.trim().toLowerCase();
+  const number = numericValue(normalized);
+  if (Number.isNaN(number)) return "";
+
+  if (normalized.includes("%")) {
+    const translateValue = getClosestValue(Object.keys(translate), Math.abs(number));
+    const tailwindValue = translate[translateValue];
+    return tailwindValue ? classWithSign(prefix, number < 0 ? `-${tailwindValue}` : tailwindValue) : "";
+  }
+
+  if (normalized === "0") return `${prefix}-0`;
+  if (!validValue(normalized)) return "";
+
+  if (normalized.includes("px") && Math.abs(number) === 1) {
+    return classWithSign(prefix, number < 0 ? "-px" : "px");
+  }
+
+  const remValue = normalized.includes("px") ? Math.abs(number) / 16 : Math.abs(number);
+  const tailwindValue = getClosestValue(sizes, remValue * 4);
+  return classWithSign(prefix, number < 0 ? `-${tailwindValue}` : tailwindValue);
+};
+
+const transformClassFor = (node: FunctionNode) => {
+  const name = node.value.toLowerCase();
+  const args = transformFunctionArguments(node);
+  const first = args[0]?.toLowerCase() ?? "";
+  const firstNumber = numericValue(first);
+
+  if (name === "translatex") return [translateClassFor("translate-x", first)];
+  if (name === "translatey") return [translateClassFor("translate-y", first)];
+  if (name === "translate") {
+    return [
+      translateClassFor("translate-x", args[0] ?? ""),
+      translateClassFor("translate-y", args[1] ?? "0"),
+    ].filter(Boolean);
+  }
+
+  if (name === "rotate") {
+    if (Number.isNaN(firstNumber)) return [];
+    const tailwindValue = getClosestValue(rotate, Math.abs(firstNumber));
+    return [classWithSign("rotate", firstNumber < 0 ? `-${tailwindValue}` : tailwindValue)];
+  }
+
+  if (name === "skewx" || name === "skewy") {
+    if (Number.isNaN(firstNumber)) return [];
+    const prefix = name === "skewx" ? "skew-x" : "skew-y";
+    const tailwindValue = getClosestValue(skew, Math.abs(firstNumber));
+    return [classWithSign(prefix, firstNumber < 0 ? `-${tailwindValue}` : tailwindValue)];
+  }
+
+  if (name === "scale" || name === "scalex" || name === "scaley") {
+    if (Number.isNaN(firstNumber)) return [];
+    const prefix =
+      name === "scalex" ? "scale-x" : name === "scaley" ? "scale-y" : "scale";
+    return [`${prefix}-${getClosestValue(scale, firstNumber * 100)}`];
+  }
+
+  return [];
+};
+
+const transformClassesFor = (value: string) => {
+  const parsed = valueParser(value);
+  const functionNodes = parsed.nodes.filter(
+    (node): node is FunctionNode => node.type === "function"
+  );
+
+  if (functionNodes.length === 0) return [];
+
+  const hasUnsupportedNodes = parsed.nodes.some(
+    (node) => node.type !== "function" && node.type !== "space"
+  );
+  if (hasUnsupportedNodes) return [];
+
+  const classes = functionNodes.flatMap(transformClassFor).filter(Boolean);
+  return classes.length === functionNodes.length ? classes : [];
+};
+
 export const convertAttributesDetailed = (
   attributes: { [index: string]: string },
   options: ConversionOptions = {}
@@ -563,35 +669,18 @@ export const convertAttributesDetailed = (
       if (style.includes("left")) abbreviation += "l";
       if (styleValue === "1px") tailwindValue = "px";
     } else if (style === "transform") {
-      if (styleValue.includes("skew")) {
-        abbreviation = styleValue.includes("skewx") ? "skew-x" : "skew-y";
-        tailwindValue = getClosestValue(skew, styleNumber);
-      } else if (styleValue.includes("rotate")) {
-        abbreviation = "rotate";
-        tailwindValue = getClosestValue(rotate, styleNumber);
-      } else if (styleValue.includes("scale")) {
-        abbreviation = "scale";
-        if (styleValue.includes("scalex")) abbreviation += "-x";
-        else if (styleValue.includes("scaley")) abbreviation += "-y";
-        tailwindValue = getClosestValue(scale, styleNumber * 100);
-      } else if (styleValue.includes("translate")) {
-        abbreviation = styleValue.includes("translatex")
-          ? "translate-x"
-          : "translate-y";
-        if (styleValue.includes("px")) {
-          if (styleNumber == 1) tailwindValue = "px";
-          styleNumber = styleNumber / 16;
-        }
-        if (tailwindValue != "px") {
-          tailwindValue = getClosestValue(sizes, styleNumber * 4);
-        }
-        if (styleValue.includes("%")) {
-          const translateValue = getClosestValue(
-            Object.keys(translate),
-            styleNumber
-          );
-          tailwindValue = translate[translateValue];
-        }
+      const transformClasses = transformClassesFor(styleValue);
+      if (transformClasses.length > 0) {
+        transformClasses.forEach((className) => {
+          result.push({
+            property: style,
+            value: originalValue,
+            className,
+            status: "approximated",
+            message: "Mapped to the nearest Tailwind design token."
+          });
+        });
+        continue;
       }
     } else if (style === "scroll-snap-type") {
       abbreviation = "snap";

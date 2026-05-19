@@ -358,6 +358,59 @@ test("can prefer exact arbitrary transition values", () => {
   expect(result.leftoverCss).toBe("");
 });
 
+test("converts compound transform functions into multiple utilities", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="badge">New</div></body></html>`,
+    `.badge { transform: translateX(12px) translateY(-50%) rotate(6deg) scale(1.05); }`
+  );
+
+  expect(result.html).toContain(
+    'class="translate-x-3 -translate-y-1/2 rotate-6 scale-105"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".badge",
+        property: "transform",
+        className: "translate-x-3",
+      }),
+      expect.objectContaining({
+        selector: ".badge",
+        property: "transform",
+        className: "-translate-y-1/2",
+      }),
+      expect.objectContaining({
+        selector: ".badge",
+        property: "transform",
+        className: "rotate-6",
+      }),
+      expect.objectContaining({
+        selector: ".badge",
+        property: "transform",
+        className: "scale-105",
+      }),
+    ])
+  );
+});
+
+test("preserves unsupported transform functions", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="badge">New</div></body></html>`,
+    `.badge { transform: matrix(1, 0, 0, 1, 10, 20); }`
+  );
+
+  expect(result.html).toContain('class="badge"');
+  expect(result.leftoverCss).toContain("transform: matrix(1, 0, 0, 1, 10, 20);");
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".badge",
+      property: "transform",
+      value: "matrix(1, 0, 0, 1, 10, 20)",
+    }),
+  ]);
+});
+
 test("can prefer exact arbitrary values for supported declarations", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
@@ -1062,4 +1115,19 @@ test("generates scriptless preview css for exact axis and positioning utilities"
     ".tracking-\\[0\\.02em\\]{letter-spacing: 0.02em;}"
   );
   expect(result).toContain(".indent-\\[2rem\\]{text-indent: 2rem;}");
+});
+
+test("generates composable scriptless preview css for transform utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="translate-x-3 -translate-y-1/2 rotate-6 scale-105 skew-x-3"></section>`
+  );
+
+  expect(result).toContain("--tw-translate-x: 0.75rem;");
+  expect(result).toContain("--tw-translate-y: -50%;");
+  expect(result).toContain("--tw-rotate: 6deg;");
+  expect(result).toContain("--tw-scale-x: 1.05;--tw-scale-y: 1.05;");
+  expect(result).toContain("--tw-skew-x: 3deg;");
+  expect(result).toContain(
+    "transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0))"
+  );
 });

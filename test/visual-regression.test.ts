@@ -372,6 +372,40 @@ const visualCases: VisualRegressionCase[] = [
     maxMismatchRatio: 0.08,
   },
   {
+    name: "transformed badge composition",
+    html: `
+      <section class="stage">
+        <div class="badge">New</div>
+      </section>
+    `,
+    css: `
+      body {
+        margin: 0;
+        padding: 48px;
+        background: #ffffff;
+      }
+
+      .stage {
+        position: relative;
+        width: 240px;
+        height: 160px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .badge {
+        position: absolute;
+        top: 64px;
+        left: 80px;
+        padding: 8px 16px;
+        background: #2563eb;
+        color: white;
+        border-radius: 8px;
+        transform: translateX(12px) translateY(-50%) rotate(6deg) scale(1.05);
+      }
+    `,
+    maxMismatchRatio: 0.08,
+  },
+  {
     name: "preserved unsupported animation does not distort layout",
     html: `
       <section class="notice">

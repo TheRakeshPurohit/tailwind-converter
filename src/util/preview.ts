@@ -332,6 +332,9 @@ const sizeValue = (prefix: string, value: string) => {
   return spacingValue(value);
 };
 
+const transformDeclaration =
+  "transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0)) skewX(var(--tw-skew-x, 0)) skewY(var(--tw-skew-y, 0)) scaleX(var(--tw-scale-x, 1)) scaleY(var(--tw-scale-y, 1));";
+
 const arbitraryValue = (value: string) => {
   return value.replace(/\\,/g, ",").replace(/_/g, " ");
 };
@@ -498,6 +501,39 @@ const declarationsForUtility = (utility: string) => {
 
   const opacityMatch = utility.match(/^opacity-(\d+)$/);
   if (opacityMatch) return `opacity: ${Number(opacityMatch[1]) / 100};`;
+
+  const translateMatch = utility.match(/^(-)?translate-([xy])-(.+)$/);
+  if (translateMatch) {
+    const [, negative, axis, value] = translateMatch;
+    const cssValue = spacingValue(value);
+    if (!cssValue) return "";
+    return `--tw-translate-${axis}: ${negative ? "-" : ""}${cssValue};${transformDeclaration}`;
+  }
+
+  const rotateMatch = utility.match(/^(-)?rotate-(.+)$/);
+  if (rotateMatch) {
+    const [, negative, value] = rotateMatch;
+    return `--tw-rotate: ${negative ? "-" : ""}${value}deg;${transformDeclaration}`;
+  }
+
+  const skewMatch = utility.match(/^(-)?skew-([xy])-(.+)$/);
+  if (skewMatch) {
+    const [, negative, axis, value] = skewMatch;
+    return `--tw-skew-${axis}: ${negative ? "-" : ""}${value}deg;${transformDeclaration}`;
+  }
+
+  const scaleMatch = utility.match(/^scale(?:-([xy]))?-(\d+)$/);
+  if (scaleMatch) {
+    const [, axis, value] = scaleMatch;
+    const scaleValue = String(Number(value) / 100);
+    if (axis === "x") {
+      return `--tw-scale-x: ${scaleValue};${transformDeclaration}`;
+    }
+    if (axis === "y") {
+      return `--tw-scale-y: ${scaleValue};${transformDeclaration}`;
+    }
+    return `--tw-scale-x: ${scaleValue};--tw-scale-y: ${scaleValue};${transformDeclaration}`;
+  }
 
   const zIndexMatch = utility.match(/^z-(auto|\d+)$/);
   if (zIndexMatch) return `z-index: ${zIndexMatch[1]};`;
