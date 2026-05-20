@@ -538,6 +538,14 @@ const isColorValue = (value: string) =>
   /^hsla?\(/i.test(value) ||
   colorKeywords.has(value);
 
+const isBackgroundImageValue = (value: string) => {
+  const nodes = valueParser(value).nodes.filter((node) => node.type !== "space");
+  if (nodes.length !== 1 || nodes[0].type !== "function") return false;
+
+  const functionName = nodes[0].value.toLowerCase();
+  return functionName === "url" || functionName.endsWith("gradient");
+};
+
 const expandBorderShorthand = (property: string, value: string) => {
   const borderProperty = borderSides[property];
   if (!borderProperty) return null;
@@ -595,6 +603,12 @@ const expandBackgroundShorthand = (value: string) => {
   if (values.length === 1 && (isColorValue(values[0]) || isColorValue(values[0].toLowerCase()))) {
     return {
       "background-color": values[0],
+    };
+  }
+
+  if (isBackgroundImageValue(value)) {
+    return {
+      "background-image": value,
     };
   }
 

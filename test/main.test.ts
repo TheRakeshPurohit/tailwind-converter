@@ -783,6 +783,57 @@ test("preserves compound background shorthand", () => {
   ]);
 });
 
+test("preserves background image shorthand in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background: linear-gradient(to right, red, blue); padding: 1rem; }`
+  );
+
+  expect(result.html).toContain('class="hero p-4"');
+  expect(result.leftoverCss).toContain(
+    "background-image: linear-gradient(to right, red, blue);"
+  );
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".hero",
+      property: "background-image",
+      value: "linear-gradient(to right, red, blue)",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary background shorthand gradients", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background: linear-gradient(to right, red, blue); }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="bg-[linear-gradient(to_right\\,_red\\,_blue)]"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual([
+    expect.objectContaining({
+      selector: ".hero",
+      property: "background-image",
+      value: "linear-gradient(to right, red, blue)",
+      className: "bg-[linear-gradient(to_right\\,_red\\,_blue)]",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary background shorthand urls", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background: url(#hero); }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="bg-[url(#hero)]"');
+  expect(result.leftoverCss).toBe("");
+});
+
 test("preserves background images in token mode", () => {
   const result = convertHtmlCss(
     `<html><body><section class="hero">Hero</section></body></html>`,
