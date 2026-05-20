@@ -406,6 +406,39 @@ const visualCases: VisualRegressionCase[] = [
     maxMismatchRatio: 0.08,
   },
   {
+    name: "filtered panel composition",
+    html: `
+      <section class="filter-stage">
+        <div class="filter-card">Filtered</div>
+      </section>
+    `,
+    css: `
+      body {
+        margin: 0;
+        padding: 48px;
+        background: white;
+      }
+
+      .filter-stage {
+        width: 280px;
+        height: 180px;
+        background: #f3f4f6;
+        padding: 32px;
+      }
+
+      .filter-card {
+        width: 160px;
+        height: 96px;
+        padding: 16px;
+        background: #2563eb;
+        color: white;
+        border-radius: 12px;
+        filter: blur(8px) brightness(1.1) contrast(95%) saturate(1.5);
+      }
+    `,
+    maxMismatchRatio: 0.08,
+  },
+  {
     name: "preserved unsupported animation does not distort layout",
     html: `
       <section class="notice">

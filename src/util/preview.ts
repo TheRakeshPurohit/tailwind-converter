@@ -335,6 +335,22 @@ const sizeValue = (prefix: string, value: string) => {
 const transformDeclaration =
   "transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0)) skewX(var(--tw-skew-x, 0)) skewY(var(--tw-skew-y, 0)) scaleX(var(--tw-scale-x, 1)) scaleY(var(--tw-scale-y, 1));";
 
+const filterDeclaration =
+  "filter: blur(var(--tw-blur, 0)) brightness(var(--tw-brightness, 1)) contrast(var(--tw-contrast, 1)) grayscale(var(--tw-grayscale, 0)) hue-rotate(var(--tw-hue-rotate, 0)) invert(var(--tw-invert, 0)) opacity(var(--tw-filter-opacity, 1)) saturate(var(--tw-saturate, 1)) sepia(var(--tw-sepia, 0));";
+
+const backdropFilterDeclaration =
+  "backdrop-filter: blur(var(--tw-backdrop-blur, 0)) brightness(var(--tw-backdrop-brightness, 1)) contrast(var(--tw-backdrop-contrast, 1)) grayscale(var(--tw-backdrop-grayscale, 0)) hue-rotate(var(--tw-backdrop-hue-rotate, 0)) invert(var(--tw-backdrop-invert, 0)) opacity(var(--tw-backdrop-opacity, 1)) saturate(var(--tw-backdrop-saturate, 1)) sepia(var(--tw-backdrop-sepia, 0));";
+
+const blurValues: { [value: string]: string } = {
+  none: "0",
+  sm: "4px",
+  md: "12px",
+  lg: "16px",
+  xl: "24px",
+  "2xl": "40px",
+  "3xl": "64px",
+};
+
 const arbitraryValue = (value: string) => {
   return value.replace(/\\,/g, ",").replace(/_/g, " ");
 };
@@ -350,6 +366,53 @@ const isArbitraryColorValue = (value: string) => {
     normalizedValue.startsWith("oklab(") ||
     normalizedValue.startsWith("oklch(")
   );
+};
+
+const filterAmount = (value: string) => String(Number(value) / 100);
+
+const declarationsForFilterUtility = (utility: string) => {
+  const isBackdrop = utility.startsWith("backdrop-");
+  const prefix = isBackdrop ? "backdrop-" : "";
+  const filterPropertyPrefix = isBackdrop ? "--tw-backdrop-" : "--tw-";
+  const declaration = isBackdrop ? backdropFilterDeclaration : filterDeclaration;
+  const normalizedUtility = isBackdrop
+    ? utility.replace("backdrop-", "")
+    : utility;
+
+  const blurMatch = normalizedUtility.match(/^blur(?:-(none|sm|md|lg|xl|2xl|3xl))?$/);
+  if (blurMatch) {
+    const value = blurMatch[1] ? blurValues[blurMatch[1]] : "8px";
+    return `${filterPropertyPrefix}blur: ${value};${declaration}`;
+  }
+
+  for (const name of ["brightness", "contrast", "saturate"] as const) {
+    const match = normalizedUtility.match(new RegExp(`^${name}-(\\d+)$`));
+    if (match) {
+      return `${filterPropertyPrefix}${name}: ${filterAmount(match[1])};${declaration}`;
+    }
+  }
+
+  const opacityMatch = normalizedUtility.match(/^opacity-(\d+)$/);
+  if (opacityMatch && isBackdrop) {
+    return `${filterPropertyPrefix}opacity: ${filterAmount(opacityMatch[1])};${declaration}`;
+  }
+
+  const hueRotateMatch = normalizedUtility.match(/^(-)?hue-rotate-(\d+)$/);
+  if (hueRotateMatch) {
+    const [, negative, value] = hueRotateMatch;
+    return `${filterPropertyPrefix}hue-rotate: ${negative ? "-" : ""}${value}deg;${declaration}`;
+  }
+
+  for (const name of ["grayscale", "invert", "sepia"] as const) {
+    if (normalizedUtility === name) {
+      return `${filterPropertyPrefix}${name}: 1;${declaration}`;
+    }
+    if (normalizedUtility === `${name}-0`) {
+      return `${filterPropertyPrefix}${name}: 0;${declaration}`;
+    }
+  }
+
+  return prefix ? "" : "";
 };
 
 const declarationsForUtility = (utility: string) => {
@@ -501,6 +564,9 @@ const declarationsForUtility = (utility: string) => {
 
   const opacityMatch = utility.match(/^opacity-(\d+)$/);
   if (opacityMatch) return `opacity: ${Number(opacityMatch[1]) / 100};`;
+
+  const filterUtility = declarationsForFilterUtility(utility);
+  if (filterUtility) return filterUtility;
 
   const translateMatch = utility.match(/^(-)?translate-([xy])-(.+)$/);
   if (translateMatch) {

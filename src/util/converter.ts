@@ -429,6 +429,102 @@ const transformClassesFor = (value: string) => {
   return classes.length === functionNodes.length ? classes : [];
 };
 
+const functionArgument = (node: FunctionNode) =>
+  node.nodes.map((child) => valueParser.stringify(child)).join("").trim();
+
+const filterScaleNumber = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  const number = numericValue(normalized);
+  if (Number.isNaN(number)) return Number.NaN;
+  return normalized.includes("%") || number > 2 ? number : number * 100;
+};
+
+const blurClassFor = (prefix: "blur" | "backdrop-blur", value: string) => {
+  const normalized = value.trim().toLowerCase();
+  const number = numericValue(normalized);
+  if (Number.isNaN(number) || !validValue(normalized)) return "";
+
+  const pxValue = normalized.includes("rem") ? number * 16 : number;
+  const size = getClosestValue(Object.keys(blur), pxValue);
+  const tailwindValue = blur[size];
+  if (tailwindValue === "") return prefix;
+  return `${prefix}-${tailwindValue}`;
+};
+
+const binaryFilterClassFor = (
+  prefix: "grayscale" | "invert" | "sepia",
+  value: string,
+  utilityPrefix = ""
+) => {
+  const amount = filterScaleNumber(value || "100%");
+  if (Number.isNaN(amount)) return "";
+  return amount <= 50 ? `${utilityPrefix}${prefix}-0` : `${utilityPrefix}${prefix}`;
+};
+
+const filterClassFor = (node: FunctionNode, utilityPrefix = "") => {
+  const name = node.value.toLowerCase();
+  const argument = functionArgument(node);
+  const amount = filterScaleNumber(argument);
+
+  if (name === "blur") {
+    return blurClassFor(utilityPrefix === "backdrop-" ? "backdrop-blur" : "blur", argument);
+  }
+
+  if (name === "brightness") {
+    if (Number.isNaN(amount)) return "";
+    return `${utilityPrefix}brightness-${getClosestValue(brightness, amount)}`;
+  }
+
+  if (name === "contrast") {
+    if (Number.isNaN(amount)) return "";
+    return `${utilityPrefix}contrast-${getClosestValue(contrast, amount)}`;
+  }
+
+  if (name === "saturate") {
+    if (Number.isNaN(amount)) return "";
+    return `${utilityPrefix}saturate-${getClosestValue(saturate, amount)}`;
+  }
+
+  if (name === "opacity") {
+    if (Number.isNaN(amount)) return "";
+    return `${utilityPrefix}opacity-${getClosestValue(opacity, amount)}`;
+  }
+
+  if (name === "hue-rotate") {
+    const degrees = numericValue(argument);
+    if (Number.isNaN(degrees)) return "";
+    const tailwindValue = getClosestValue(hueRotate, Math.abs(degrees));
+    return classWithSign(`${utilityPrefix}hue-rotate`, degrees < 0 ? `-${tailwindValue}` : tailwindValue);
+  }
+
+  if (name === "grayscale") return binaryFilterClassFor("grayscale", argument, utilityPrefix);
+  if (name === "invert") return binaryFilterClassFor("invert", argument, utilityPrefix);
+  if (name === "sepia") return binaryFilterClassFor("sepia", argument, utilityPrefix);
+
+  return "";
+};
+
+const filterClassesFor = (value: string, property: "filter" | "backdrop-filter") => {
+  const parsed = valueParser(value);
+  const functionNodes = parsed.nodes.filter(
+    (node): node is FunctionNode => node.type === "function"
+  );
+
+  if (functionNodes.length === 0) return [];
+
+  const hasUnsupportedNodes = parsed.nodes.some(
+    (node) => node.type !== "function" && node.type !== "space"
+  );
+  if (hasUnsupportedNodes) return [];
+
+  const utilityPrefix = property === "backdrop-filter" ? "backdrop-" : "";
+  const classes = functionNodes
+    .map((node) => filterClassFor(node, utilityPrefix))
+    .filter(Boolean);
+
+  return classes.length === functionNodes.length ? classes : [];
+};
+
 export const convertAttributesDetailed = (
   attributes: { [index: string]: string },
   options: ConversionOptions = {}
@@ -805,42 +901,21 @@ export const convertAttributesDetailed = (
       }
     }
     if (style === "filter" || style === "backdrop-filter") {
-      //TODO Refactor because there can be multiple filters
-      if (styleValue.includes("blur")) {
-        if (styleValue.includes("rem")) {
-          styleNumber = styleNumber * 16;
-        }
-        if (validValue(styleValue)) {
-          abbreviation = "blur";
-          const size = getClosestValue(Object.keys(blur), styleNumber);
-          tailwindValue = blur[size];
-          if (!tailwindValue) {
-            abbreviation = "";
-            tailwindValue = "blur";
-          }
-        }
-      } else if (styleValue.includes("brightness")) {
-        abbreviation = "brightness";
-        tailwindValue = getClosestValue(brightness, styleNumber * 100);
-      } else if (styleValue.includes("contrast")) {
-        abbreviation = "contrast";
-        tailwindValue = getClosestValue(contrast, styleNumber * 100);
-      } else if (styleValue.includes("hue-rotate")) {
-        abbreviation = "hue-rotate";
-        tailwindValue = getClosestValue(hueRotate, styleNumber);
-      } else if (styleValue.includes("saturate")) {
-        abbreviation = "saturate";
-        tailwindValue = getClosestValue(saturate, styleNumber * 100);
-      }
-      if (
-        (style === "backdrop-filter" && abbreviation != "") ||
-        styleValue.includes("opacity")
-      ) {
-        abbreviation = "backdrop-" + abbreviation;
-        if (styleValue.includes("opacity")) {
-          abbreviation += "opacity";
-          tailwindValue = getClosestValue(opacity, styleNumber * 100);
-        }
+      const filterClasses = filterClassesFor(
+        styleValue,
+        style as "filter" | "backdrop-filter"
+      );
+      if (filterClasses.length > 0) {
+        filterClasses.forEach((className) => {
+          result.push({
+            property: style,
+            value: originalValue,
+            className,
+            status: "approximated",
+            message: "Mapped to the nearest Tailwind design token."
+          });
+        });
+        continue;
       }
     }
     if (tailwindValue !== "" && tailwindValue !== undefined) {

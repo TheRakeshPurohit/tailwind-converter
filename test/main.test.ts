@@ -411,6 +411,59 @@ test("preserves unsupported transform functions", () => {
   ]);
 });
 
+test("converts compound filter functions into multiple utilities", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { filter: blur(8px) brightness(1.1) contrast(95%) saturate(1.5) hue-rotate(15deg) grayscale(100%); }`
+  );
+
+  expect(result.html).toContain(
+    'class="blur brightness-110 contrast-100 saturate-150 hue-rotate-15 grayscale"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ property: "filter", className: "blur" }),
+      expect.objectContaining({ property: "filter", className: "brightness-110" }),
+      expect.objectContaining({ property: "filter", className: "contrast-100" }),
+      expect.objectContaining({ property: "filter", className: "saturate-150" }),
+      expect.objectContaining({ property: "filter", className: "hue-rotate-15" }),
+      expect.objectContaining({ property: "filter", className: "grayscale" }),
+    ])
+  );
+});
+
+test("converts compound backdrop-filter functions into backdrop utilities", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="panel">Panel</div></body></html>`,
+    `.panel { backdrop-filter: blur(12px) brightness(.9) contrast(1.25); }`
+  );
+
+  expect(result.html).toContain(
+    'class="backdrop-blur-md backdrop-brightness-90 backdrop-contrast-125"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves unsupported filter functions", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { filter: blur(8px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.2)); }`
+  );
+
+  expect(result.html).toContain('class="card"');
+  expect(result.leftoverCss).toContain(
+    "filter: blur(8px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.2));"
+  );
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".card",
+      property: "filter",
+      value: "blur(8px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.2))",
+    }),
+  ]);
+});
+
 test("can prefer exact arbitrary values for supported declarations", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
@@ -1129,5 +1182,27 @@ test("generates composable scriptless preview css for transform utilities", () =
   expect(result).toContain("--tw-skew-x: 3deg;");
   expect(result).toContain(
     "transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0))"
+  );
+});
+
+test("generates composable scriptless preview css for filter utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="blur brightness-110 contrast-95 saturate-150 hue-rotate-15 grayscale backdrop-blur-md backdrop-brightness-90 backdrop-contrast-125"></section>`
+  );
+
+  expect(result).toContain("--tw-blur: 8px;");
+  expect(result).toContain("--tw-brightness: 1.1;");
+  expect(result).toContain("--tw-contrast: 0.95;");
+  expect(result).toContain("--tw-saturate: 1.5;");
+  expect(result).toContain("--tw-hue-rotate: 15deg;");
+  expect(result).toContain("--tw-grayscale: 1;");
+  expect(result).toContain(
+    "filter: blur(var(--tw-blur, 0)) brightness(var(--tw-brightness, 1))"
+  );
+  expect(result).toContain("--tw-backdrop-blur: 12px;");
+  expect(result).toContain("--tw-backdrop-brightness: 0.9;");
+  expect(result).toContain("--tw-backdrop-contrast: 1.25;");
+  expect(result).toContain(
+    "backdrop-filter: blur(var(--tw-backdrop-blur, 0)) brightness(var(--tw-backdrop-brightness, 1))"
   );
 });
