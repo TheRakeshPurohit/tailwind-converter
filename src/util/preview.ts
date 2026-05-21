@@ -60,6 +60,14 @@ const fontSizes: { [utility: string]: string } = {
   "text-9xl": "font-size: 8rem;",
 };
 
+const colorKeywordValues: { [color: string]: string } = {
+  current: "currentColor",
+  inherit: "inherit",
+  transparent: "transparent",
+};
+
+const colorValue = (color: string) => colorKeywordValues[color] ?? colorCodes[color];
+
 const gridTemplates = Object.fromEntries(
   Array.from({ length: 12 }, (_, index) => {
     const count = index + 1;
@@ -527,6 +535,12 @@ const declarationsForUtility = (utility: string) => {
       "border-r": "border-right-color",
       "border-b": "border-bottom-color",
       "border-l": "border-left-color",
+      decoration: "text-decoration-color",
+      outline: "outline-color",
+      accent: "accent-color",
+      caret: "caret-color",
+      fill: "fill",
+      stroke: "stroke",
     };
     const property = arbitraryProperties[prefix];
     return property ? `${property}: ${cssValue};` : "";
@@ -587,11 +601,11 @@ const declarationsForUtility = (utility: string) => {
   }
 
   const colorMatch = utility.match(
-    /^(text|bg|border|border-t|border-r|border-b|border-l)-(.+)$/
+    /^(text|bg|border|border-t|border-r|border-b|border-l|decoration|outline|accent|caret|fill|stroke)-(.+)$/
   );
   if (colorMatch) {
     const [, prefix, color] = colorMatch;
-    const cssColor = colorCodes[color];
+    const cssColor = colorValue(color);
     if (!cssColor) return "";
     const properties: { [prefix: string]: string } = {
       text: "color",
@@ -601,6 +615,12 @@ const declarationsForUtility = (utility: string) => {
       "border-r": "border-right-color",
       "border-b": "border-bottom-color",
       "border-l": "border-left-color",
+      decoration: "text-decoration-color",
+      outline: "outline-color",
+      accent: "accent-color",
+      caret: "caret-color",
+      fill: "fill",
+      stroke: "stroke",
     };
     return `${properties[prefix]}: ${cssColor};`;
   }

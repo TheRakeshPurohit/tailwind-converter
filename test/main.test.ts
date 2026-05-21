@@ -93,36 +93,60 @@ test("converts unitless zero spacing on body", () => {
   ]);
 });
 
-test("uses color type hints for exact named text colors", () => {
+test.each([
+  ["color", "text-[color:blue]"],
+  ["background-color", "bg-[color:blue]"],
+  ["border-color", "border-[color:blue]"],
+  ["border-top-color", "border-t-[color:blue]"],
+  ["border-right-color", "border-r-[color:blue]"],
+  ["border-bottom-color", "border-b-[color:blue]"],
+  ["border-left-color", "border-l-[color:blue]"],
+  ["text-decoration-color", "decoration-[color:blue]"],
+  ["outline-color", "outline-[color:blue]"],
+  ["accent-color", "accent-[color:blue]"],
+  ["caret-color", "caret-[color:blue]"],
+  ["fill", "fill-[color:blue]"],
+  ["stroke", "stroke-[color:blue]"],
+])("uses color type hints for exact named %s", (property, className) => {
   const result = convertHtmlCss(
-    `<html><body><h1>Title</h1></body></html>`,
-    `h1 { color: blue; }`,
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { ${property}: blue; }`,
     "exact"
   );
 
-  expect(result.html).toContain('class="text-[color:blue]"');
+  expect(result.html).toContain(`class="${className}"`);
   expect(result.converted).toContainEqual({
-    selector: "h1",
-    property: "color",
+    selector: ".card",
+    property,
     value: "blue",
-    className: "text-[color:blue]",
+    className,
     status: "converted",
   });
 });
 
-test("uses color type hints for exact named side border colors", () => {
+test.each([
+  ["blue", "text-[color:blue]"],
+  ["#123456", "text-[#123456]"],
+  ["rgb(1, 2, 3)", "text-[rgb(1\\,_2\\,_3)]"],
+  ["hsl(210 50% 40%)", "text-[hsl(210_50%_40%)]"],
+  ["oklch(60% 0.2 250)", "text-[oklch(60%_0.2_250)]"],
+  ["transparent", "text-transparent"],
+  ["currentColor", "text-current"],
+  ["inherit", "text-inherit"],
+  ["white", "text-white"],
+])("keeps exact text color value %s", (value, className) => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
-    `.card { border-top-color: blue; }`,
+    `.card { color: ${value}; }`,
     "exact"
   );
 
-  expect(result.html).toContain('class="border-t-[color:blue]"');
+  expect(result.html).toContain(`class="${className}"`);
   expect(result.converted).toContainEqual({
     selector: ".card",
-    property: "border-top-color",
-    value: "blue",
-    className: "border-t-[color:blue]",
+    property: "color",
+    value,
+    className,
     status: "converted",
   });
 });
@@ -1215,6 +1239,42 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(
     "@media (min-width: 768px){.md\\:p-8{padding: 2rem;}}"
   );
+});
+
+test.each([
+  ["text-[color:blue]", "color: blue"],
+  ["bg-[color:blue]", "background-color: blue"],
+  ["border-[color:blue]", "border-color: blue"],
+  ["border-t-[color:blue]", "border-top-color: blue"],
+  ["border-r-[color:blue]", "border-right-color: blue"],
+  ["border-b-[color:blue]", "border-bottom-color: blue"],
+  ["border-l-[color:blue]", "border-left-color: blue"],
+  ["decoration-[color:blue]", "text-decoration-color: blue"],
+  ["outline-[color:blue]", "outline-color: blue"],
+  ["accent-[color:blue]", "accent-color: blue"],
+  ["caret-[color:blue]", "caret-color: blue"],
+  ["fill-[color:blue]", "fill: blue"],
+  ["stroke-[color:blue]", "stroke: blue"],
+])("generates scriptless preview css for exact %s", (className, declaration) => {
+  const result = generatePreviewCss(`<div class="${className}"></div>`);
+
+  expect(result).toContain(`${declaration};`);
+});
+
+test.each([
+  ["text-current", "color: currentColor"],
+  ["bg-transparent", "background-color: transparent"],
+  ["border-inherit", "border-color: inherit"],
+  ["decoration-white", "text-decoration-color: #ffffff"],
+  ["outline-black", "outline-color: #000000"],
+  ["accent-current", "accent-color: currentColor"],
+  ["caret-transparent", "caret-color: transparent"],
+  ["fill-white", "fill: #ffffff"],
+  ["stroke-black", "stroke: #000000"],
+])("generates scriptless preview css for token color %s", (className, declaration) => {
+  const result = generatePreviewCss(`<div class="${className}"></div>`);
+
+  expect(result).toContain(`${declaration};`);
 });
 
 test("generates scriptless preview css for transition utilities", () => {
