@@ -65,6 +65,8 @@ const spacingPrefixes: { [index: string]: string } = {
   "padding-left": "pl",
   width: "w",
   height: "h",
+  "min-width": "min-w",
+  "min-height": "min-h",
   gap: "gap",
   "column-gap": "gap-x",
   "row-gap": "gap-y",

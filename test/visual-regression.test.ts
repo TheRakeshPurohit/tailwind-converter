@@ -93,6 +93,51 @@ const visualCases: VisualRegressionCase[] = [
     maxMismatchRatio: 0.04,
   },
   {
+    name: "compound background shorthand decomposition",
+    mode: "exact",
+    html: `
+      <section class="promo">
+        <span>Release</span>
+        <h1>Backgrounds stay layered.</h1>
+      </section>
+    `,
+    css: `
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #f9fafb;
+      }
+
+      .promo {
+        min-height: 220px;
+        padding: 32px;
+        color: #ffffff;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #2563eb, #0f8f99) center / cover no-repeat fixed #111827;
+      }
+
+      span {
+        display: inline-block;
+        margin-bottom: 48px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        background: #ffffff;
+        border-radius: 9999px;
+      }
+
+      h1 {
+        max-width: 420px;
+        margin: 0;
+        font-size: 36px;
+        line-height: 1.08;
+      }
+    `,
+    maxMismatchRatio: 0.04,
+  },
+  {
     name: "responsive dashboard layout",
     html: `
       <main class="dashboard">

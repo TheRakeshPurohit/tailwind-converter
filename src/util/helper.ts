@@ -546,6 +546,51 @@ const isBackgroundImageValue = (value: string) => {
   return functionName === "url" || functionName.endsWith("gradient");
 };
 
+const backgroundAttachments = new Set(["fixed", "local", "scroll"]);
+const backgroundRepeats = new Set([
+  "repeat",
+  "no-repeat",
+  "repeat-x",
+  "repeat-y",
+  "round",
+  "space",
+]);
+const backgroundSizes = new Set(["auto", "cover", "contain"]);
+const backgroundPositionKeywords = new Set([
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "center",
+]);
+
+const normalizeBackgroundPosition = (tokens: string[]) => {
+  if (tokens.length === 0) return "";
+  const normalizedTokens = tokens.map((token) => token.toLowerCase());
+  if (!normalizedTokens.every((token) => backgroundPositionKeywords.has(token))) {
+    return "";
+  }
+
+  if (normalizedTokens.length === 1) return normalizedTokens[0];
+  if (normalizedTokens.length !== 2) return "";
+
+  const [first, second] = normalizedTokens;
+  if (first === second && first === "center") return "center";
+
+  const horizontal = normalizedTokens.find((token) =>
+    ["left", "right"].includes(token)
+  );
+  const vertical = normalizedTokens.find((token) =>
+    ["top", "bottom"].includes(token)
+  );
+
+  if (horizontal && vertical) return `${horizontal} ${vertical}`;
+  if (horizontal && normalizedTokens.includes("center")) return horizontal;
+  if (vertical && normalizedTokens.includes("center")) return vertical;
+
+  return "";
+};
+
 const expandBorderShorthand = (property: string, value: string) => {
   const borderProperty = borderSides[property];
   if (!borderProperty) return null;
@@ -599,6 +644,8 @@ const expandBorderColorShorthand = (value: string) => {
 };
 
 const expandBackgroundShorthand = (value: string) => {
+  if (hasTopLevelComma(value)) return null;
+
   const values = splitCssValue(value);
   if (values.length === 1 && (isColorValue(values[0]) || isColorValue(values[0].toLowerCase()))) {
     return {
@@ -612,7 +659,90 @@ const expandBackgroundShorthand = (value: string) => {
     };
   }
 
-  return null;
+  const expanded: CSSProperties = {};
+  const positionTokens: string[] = [];
+  const sizeTokens: string[] = [];
+  let readingSize = false;
+  let unknownValue = false;
+
+  for (const part of values) {
+    const normalizedPart = part.toLowerCase();
+
+    if (part === "/") {
+      if (readingSize) {
+        unknownValue = true;
+        break;
+      }
+      readingSize = true;
+      continue;
+    }
+
+    if (isBackgroundImageValue(part)) {
+      if (expanded["background-image"]) {
+        unknownValue = true;
+        break;
+      }
+      expanded["background-image"] = part;
+      continue;
+    }
+
+    if (isColorValue(part) || isColorValue(normalizedPart)) {
+      if (expanded["background-color"]) {
+        unknownValue = true;
+        break;
+      }
+      expanded["background-color"] = part;
+      continue;
+    }
+
+    if (backgroundAttachments.has(normalizedPart)) {
+      if (expanded["background-attachment"]) {
+        unknownValue = true;
+        break;
+      }
+      expanded["background-attachment"] = normalizedPart;
+      continue;
+    }
+
+    if (backgroundRepeats.has(normalizedPart)) {
+      if (expanded["background-repeat"]) {
+        unknownValue = true;
+        break;
+      }
+      expanded["background-repeat"] = normalizedPart;
+      continue;
+    }
+
+    if (readingSize) {
+      sizeTokens.push(part);
+      continue;
+    }
+
+    positionTokens.push(part);
+  }
+
+  const backgroundPosition = normalizeBackgroundPosition(positionTokens);
+  if (positionTokens.length > 0 && !backgroundPosition) unknownValue = true;
+  if (backgroundPosition) expanded["background-position"] = backgroundPosition;
+
+  if (sizeTokens.length > 0) {
+    const backgroundSize = sizeTokens.join(" ").toLowerCase();
+    if (sizeTokens.length === 1 && backgroundSizes.has(backgroundSize)) {
+      expanded["background-size"] = backgroundSize;
+    } else {
+      unknownValue = true;
+    }
+  }
+
+  if (
+    unknownValue ||
+    Object.keys(expanded).length === 0 ||
+    (readingSize && sizeTokens.length === 0)
+  ) {
+    return null;
+  }
+
+  return expanded;
 };
 
 const fontStyleValues = new Set(["normal", "italic", "oblique"]);

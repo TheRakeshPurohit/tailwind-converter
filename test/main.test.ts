@@ -467,17 +467,24 @@ test("preserves unsupported filter functions", () => {
 test("can prefer exact arbitrary values for supported declarations", () => {
   const result = convertHtmlCss(
     `<html><body><div class="card">Card</div></body></html>`,
-    `.card { margin: 17px; color: #123456; }`,
+    `.card { margin: 17px; min-height: 220px; color: #123456; }`,
     "exact"
   );
 
-  expect(result.html).toContain('class="m-[17px] text-[#123456]"');
+  expect(result.html).toContain(
+    'class="m-[17px] min-h-[220px] text-[#123456]"'
+  );
   expect(result.converted).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         selector: ".card",
         property: "margin",
         className: "m-[17px]",
+      }),
+      expect.objectContaining({
+        selector: ".card",
+        property: "min-height",
+        className: "min-h-[220px]",
       }),
       expect.objectContaining({
         selector: ".card",
@@ -764,21 +771,54 @@ test("converts color-only background shorthand", () => {
   expect(result.leftoverCss).toBe("");
 });
 
-test("preserves compound background shorthand", () => {
+test("expands compound background shorthand", () => {
   const result = convertHtmlCss(
     `<html><body><div class="hero">Hero</div></body></html>`,
     `.hero { background: url("/hero.png") center / cover no-repeat; padding: 1rem; }`
   );
 
+  expect(result.html).toContain(
+    'class="hero bg-no-repeat bg-center bg-cover p-4"'
+  );
+  expect(result.leftoverCss).toContain(
+    'background-image: url("/hero.png");'
+  );
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".hero",
+      property: "background-image",
+      value: 'url("/hero.png")',
+    }),
+  ]);
+});
+
+test("expands background shorthand color repeat position size and attachment", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="hero">Hero</div></body></html>`,
+    `.hero { background: #111827 url(#hero) right top / contain repeat-x fixed; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="bg-[#111827] bg-[url(#hero)] bg-repeat-x bg-fixed bg-right-top bg-contain"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves layered compound background shorthand", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="hero">Hero</div></body></html>`,
+    `.hero { background: linear-gradient(to right, red, blue), url(#hero) center / cover no-repeat; padding: 1rem; }`
+  );
+
   expect(result.html).toContain('class="hero p-4"');
   expect(result.leftoverCss).toContain(
-    'background: url("/hero.png") center / cover no-repeat;'
+    "background: linear-gradient(to right, red, blue), url(#hero) center / cover no-repeat;"
   );
   expect(result.unsupported).toEqual([
     expect.objectContaining({
       selector: ".hero",
       property: "background",
-      value: 'url("/hero.png") center / cover no-repeat',
     }),
   ]);
 });
@@ -1169,6 +1209,19 @@ test("generates scriptless preview css for arbitrary background images", () => {
   expect(result).toContain(
     ".bg-\\[linear-gradient\\(to_right\\\\\\,_red\\\\\\,_blue\\)\\]{background-image: linear-gradient(to right, red, blue);}"
   );
+});
+
+test("generates scriptless preview css for background placement utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="bg-fixed bg-repeat-x bg-right-top bg-contain"></section>`
+  );
+
+  expect(result).toContain(".bg-fixed{background-attachment: fixed;}");
+  expect(result).toContain(".bg-repeat-x{background-repeat: repeat-x;}");
+  expect(result).toContain(
+    ".bg-right-top{background-position: right top;}"
+  );
+  expect(result).toContain(".bg-contain{background-size: contain;}");
 });
 
 test("generates scriptless preview css for common converter layout utilities", () => {
