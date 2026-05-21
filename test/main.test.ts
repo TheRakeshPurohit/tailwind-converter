@@ -93,6 +93,23 @@ test("converts unitless zero spacing on body", () => {
   ]);
 });
 
+test("uses color type hints for exact named text colors", () => {
+  const result = convertHtmlCss(
+    `<html><body><h1>Title</h1></body></html>`,
+    `h1 { color: blue; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="text-[color:blue]"');
+  expect(result.converted).toContainEqual({
+    selector: "h1",
+    property: "color",
+    value: "blue",
+    className: "text-[color:blue]",
+    status: "converted",
+  });
+});
+
 test("converts standalone keyword font weight", () => {
   const result = convertHtmlCss(
     `<html><body><h1 class="logo">MySite</h1></body></html>`,
@@ -1142,7 +1159,7 @@ test("escapes style closing tags in preview css", () => {
 
 test("generates scriptless preview css for common Tailwind classes", () => {
   const result = generatePreviewCss(
-    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[17px] bg-white border border-b border-b-[3px] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
+    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[color:blue] text-[17px] bg-white border border-b border-b-[3px] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
   );
 
   expect(result).toContain(".m-4{margin: 1rem;}");
@@ -1158,6 +1175,7 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(".p-\\[17px\\]{padding: 17px;}");
   expect(result).toContain(".text-red-600{color: #dc2626;}");
   expect(result).toContain(".text-\\[\\#123456\\]{color: #123456;}");
+  expect(result).toContain(".text-\\[color\\:blue\\]{color: blue;}");
   expect(result).toContain(".text-\\[17px\\]{font-size: 17px;}");
   expect(result).toContain(".bg-white{background-color: #ffffff;}");
   expect(result).toContain(".border{border-width: 1px;}");

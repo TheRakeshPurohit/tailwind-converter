@@ -376,6 +376,16 @@ const arbitraryValue = (value: string) => {
   return value.replace(/\\,/g, ",").replace(/_/g, " ");
 };
 
+const arbitraryValueParts = (value: string) => {
+  const cssValue = arbitraryValue(value);
+  const typeHintMatch = cssValue.match(/^([a-z-]+):(.+)$/);
+
+  return {
+    cssValue: typeHintMatch ? typeHintMatch[2] : cssValue,
+    typeHint: typeHintMatch?.[1] ?? "",
+  };
+};
+
 const isArbitraryColorValue = (value: string) => {
   const normalizedValue = value.trim().toLowerCase();
 
@@ -456,7 +466,7 @@ const declarationsForUtility = (utility: string) => {
   const arbitraryMatch = utility.match(/^([a-z-]+)-\[(.+)\]$/);
   if (arbitraryMatch) {
     const [, prefix, value] = arbitraryMatch;
-    const cssValue = arbitraryValue(value);
+    const { cssValue, typeHint } = arbitraryValueParts(value);
     const arbitraryProperties: { [prefix: string]: string } = {
       m: "margin",
       mt: "margin-top",
@@ -490,7 +500,10 @@ const declarationsForUtility = (utility: string) => {
       opacity: "opacity",
       tracking: "letter-spacing",
       indent: "text-indent",
-      text: isArbitraryColorValue(cssValue) ? "color" : "font-size",
+      text:
+        typeHint === "color" || isArbitraryColorValue(cssValue)
+          ? "color"
+          : "font-size",
       leading: "line-height",
       transition: "transition-property",
       duration: "transition-duration",
@@ -501,7 +514,8 @@ const declarationsForUtility = (utility: string) => {
       "grid-cols": "grid-template-columns",
       "grid-rows": "grid-template-rows",
       bg:
-        cssValue.startsWith("url(") || cssValue.includes("gradient(")
+        typeHint !== "color" &&
+        (cssValue.startsWith("url(") || cssValue.includes("gradient("))
           ? "background-image"
           : "background-color",
       border: "border-color",
@@ -647,8 +661,29 @@ const declarationsForUtility = (utility: string) => {
   return "";
 };
 
+const splitVariantParts = (className: string) => {
+  const parts: string[] = [];
+  let current = "";
+  let bracketDepth = 0;
+
+  for (const character of className) {
+    if (character === "[") bracketDepth += 1;
+    if (character === "]") bracketDepth = Math.max(0, bracketDepth - 1);
+
+    if (character === ":" && bracketDepth === 0) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+
+  parts.push(current);
+  return parts;
+};
+
 const ruleForClassName = (className: string): UtilityRule | null => {
-  const parts = className.split(":");
+  const parts = splitVariantParts(className);
   const utility = parts.pop() ?? "";
   const declarations = declarationsForUtility(utility);
   if (!declarations) return null;

@@ -93,6 +93,37 @@ const colorPrefixes: { [index: string]: string } = {
 const arbitraryValue = (value: string) =>
   value.trim().replace(/\s+/g, "_").replace(/,/g, "\\,");
 
+const exactColorTokenAliases: { [value: string]: string } = {
+  black: "black",
+  currentcolor: "current",
+  inherit: "inherit",
+  transparent: "transparent",
+  white: "white"
+};
+
+const canInferArbitraryColor = (value: string) => {
+  const normalizedValue = value.trim().toLowerCase();
+
+  return (
+    normalizedValue.startsWith("#") ||
+    /^rgba?\(/.test(normalizedValue) ||
+    /^hsla?\(/.test(normalizedValue) ||
+    normalizedValue.startsWith("color(") ||
+    normalizedValue.startsWith("oklab(") ||
+    normalizedValue.startsWith("oklch(")
+  );
+};
+
+const exactColorClassFor = (prefix: string, value: string) => {
+  const normalizedValue = value.trim().toLowerCase();
+  const tokenAlias = exactColorTokenAliases[normalizedValue];
+
+  if (tokenAlias) return `${prefix}-${tokenAlias}`;
+  if (canInferArbitraryColor(value)) return `${prefix}-[${arbitraryValue(value)}]`;
+
+  return `${prefix}-[color:${arbitraryValue(value)}]`;
+};
+
 const splitCssValue = (value: string) => value.trim().split(/\s+/).filter(Boolean);
 
 const exactClassFor = (property: string, value: string) => {
@@ -117,7 +148,7 @@ const exactClassFor = (property: string, value: string) => {
     return `${prefix}-[${arbitraryValue(value)}]`;
   }
   if (colorPrefixes[property]) {
-    return `${colorPrefixes[property]}-[${arbitraryValue(value)}]`;
+    return exactColorClassFor(colorPrefixes[property], value);
   }
   if (property === "background-image") {
     return `bg-[${arbitraryValue(value)}]`;
