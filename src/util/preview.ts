@@ -454,13 +454,17 @@ const declarationsForUtility = (utility: string) => {
   );
   if (arbitrarySideBorderWidth) {
     const [, side, value] = arbitrarySideBorderWidth;
+    const { cssValue, typeHint } = arbitraryValueParts(value);
     const sides: { [side: string]: string } = {
       t: "top",
       r: "right",
       b: "bottom",
       l: "left",
     };
-    return `border-${sides[side]}-width: ${arbitraryValue(value)};`;
+    const property =
+      typeHint === "color" || isArbitraryColorValue(cssValue) ? "color" : "width";
+
+    return `border-${sides[side]}-${property}: ${cssValue};`;
   }
 
   const arbitraryMatch = utility.match(/^([a-z-]+)-\[(.+)\]$/);
@@ -519,6 +523,10 @@ const declarationsForUtility = (utility: string) => {
           ? "background-image"
           : "background-color",
       border: "border-color",
+      "border-t": "border-top-color",
+      "border-r": "border-right-color",
+      "border-b": "border-bottom-color",
+      "border-l": "border-left-color",
     };
     const property = arbitraryProperties[prefix];
     return property ? `${property}: ${cssValue};` : "";

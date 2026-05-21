@@ -110,6 +110,23 @@ test("uses color type hints for exact named text colors", () => {
   });
 });
 
+test("uses color type hints for exact named side border colors", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { border-top-color: blue; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain('class="border-t-[color:blue]"');
+  expect(result.converted).toContainEqual({
+    selector: ".card",
+    property: "border-top-color",
+    value: "blue",
+    className: "border-t-[color:blue]",
+    status: "converted",
+  });
+});
+
 test("converts standalone keyword font weight", () => {
   const result = convertHtmlCss(
     `<html><body><h1 class="logo">MySite</h1></body></html>`,
@@ -733,7 +750,7 @@ test("keeps functional border widths intact in exact border shorthands", () => {
   );
 
   expect(result.html).toContain(
-    'class="border-t-[calc(1px_+_1px)] border-solid border-t-red-600"'
+    'class="border-t-[calc(1px_+_1px)] border-solid border-t-[color:red]"'
   );
   expect(result.leftoverCss).toBe("");
 });
@@ -1159,7 +1176,7 @@ test("escapes style closing tags in preview css", () => {
 
 test("generates scriptless preview css for common Tailwind classes", () => {
   const result = generatePreviewCss(
-    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[color:blue] text-[17px] bg-white border border-b border-b-[3px] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
+    `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[color:blue] text-[17px] bg-white border border-b border-b-[3px] border-t-[color:blue] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
   );
 
   expect(result).toContain(".m-4{margin: 1rem;}");
@@ -1182,6 +1199,9 @@ test("generates scriptless preview css for common Tailwind classes", () => {
   expect(result).toContain(".border-b{border-bottom-width: 1px;}");
   expect(result).toContain(
     ".border-b-\\[3px\\]{border-bottom-width: 3px;}"
+  );
+  expect(result).toContain(
+    ".border-t-\\[color\\:blue\\]{border-top-color: blue;}"
   );
   expect(result).toContain(".rounded-md{border-radius: 0.375rem;}");
   expect(result).toContain(".rounded-\\[7px\\]{border-radius: 7px;}");
