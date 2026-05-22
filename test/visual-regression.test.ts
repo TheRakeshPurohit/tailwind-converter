@@ -6,6 +6,23 @@ import {
   type VisualRegressionCase,
   type VisualRegressionResult,
 } from "./visual-harness";
+import { corpusFixtures } from "./fixtures/corpus/corpus-fixtures";
+
+const corpusVisualCase = (
+  name: string,
+  maxMismatchRatio: number
+): VisualRegressionCase => {
+  const fixture = corpusFixtures.find((item) => item.name === name);
+  if (!fixture) throw new Error(`Missing corpus fixture: ${name}`);
+
+  return {
+    name,
+    html: fixture.html,
+    css: fixture.css,
+    mode: fixture.mode,
+    maxMismatchRatio,
+  };
+};
 
 const visualCases: VisualRegressionCase[] = [
   {
@@ -579,6 +596,10 @@ const visualCases: VisualRegressionCase[] = [
     `,
     maxMismatchRatio: 0.04,
   },
+  corpusVisualCase("corpus landing: pricing strip with responsive cards", 0.08),
+  corpusVisualCase("corpus bootstrap-ish: form controls with focus state", 0.08),
+  corpusVisualCase("corpus CMS: article body with rich text descendants", 0.08),
+  corpusVisualCase("corpus WordPress: gallery block with captions and columns", 0.08),
 ];
 
 describe("visual regression harness", () => {

@@ -75,7 +75,7 @@ export const corpusFixtures: ConversionFixture[] = [
         '<body class="m-0 font-sans bg-slate-50 text-gray-800">',
         'class="hero hero--blue relative overflow-hidden text-white"',
         'class="max-w-6xl my-0 mx-auto py-16 px-6 flex items-center gap-10"',
-        'class="inline-block mb-4 py-1.5 px-2.5 rounded-3xl bg-white text-blue-600 font-bold"',
+        'class="inline-block mb-4 py-1.5 px-2.5 rounded-full bg-white text-blue-600 font-bold"',
         'class="btn hover:bg-blue-700"',
       ],
       leftoverIncludes: [".hero::before", "background-image: linear-gradient"],
@@ -522,7 +522,7 @@ export const corpusFixtures: ConversionFixture[] = [
     expected: {
       htmlIncludes: [
         'class="max-w-md p-5 border border-solid border-gray-200 rounded-lg"',
-        'class="spinner w-8 h-8 border-4 border-solid border-gray-200 border-t-blue-600 rounded-3xl"',
+        'class="spinner w-8 h-8 border-4 border-solid border-gray-200 border-t-blue-600 rounded-full"',
       ],
       leftoverIncludes: ["animation: spin 1s linear infinite", "@keyframes spin"],
       unsupported: [

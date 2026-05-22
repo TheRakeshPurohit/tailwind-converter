@@ -249,6 +249,37 @@ test("converts empty box-shadow to shadow-none", () => {
   expect(result.leftoverCss).toBe("");
 });
 
+test.each(["tokens", "exact"] as const)(
+  "converts pill border radius to rounded-full in %s mode",
+  (mode) => {
+    const result = convertHtmlCss(
+      `<html><body><span class="pill">New</span></body></html>`,
+      `.pill { border-radius: 9999px; }`,
+      mode
+    );
+
+    expect(result.html).toContain('class="rounded-full"');
+    expect(result.leftoverCss).toBe("");
+    expect(result.converted).toEqual([
+      expect.objectContaining({
+        selector: ".pill",
+        property: "border-radius",
+        value: "9999px",
+        className: "rounded-full",
+      }),
+    ]);
+  }
+);
+
+test("does not collapse non-pill large border radius values to rounded-full", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { border-radius: 64px; }`
+  );
+
+  expect(result.html).toContain('class="rounded-3xl"');
+});
+
 test("converts common grid template columns and rows", () => {
   const result = convertHtmlCss(
     `<html><body><section class="layout">Grid</section></body></html>`,

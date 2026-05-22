@@ -141,6 +141,7 @@ const exactClassFor = (property: string, value: string) => {
   }
   if (property === "text-indent") return `indent-[${arbitraryValue(value)}]`;
   if (property === "border-radius") {
+    if (isFullBorderRadius(value)) return "rounded-full";
     return `rounded-[${arbitraryValue(value)}]`;
   }
   if (property.includes("border") && property.includes("width")) {
@@ -182,6 +183,9 @@ const exactClassFor = (property: string, value: string) => {
   }
   return "";
 };
+
+const isFullBorderRadius = (value: string) =>
+  value.trim().toLowerCase() === "9999px";
 
 const gridTemplateClassFor = (property: string, value: string) => {
   const prefix =
@@ -890,11 +894,15 @@ export const convertAttributesDetailed = (
       }
       if (validValue(styleValue)) {
         abbreviation = "rounded";
-        if (styleValue.includes("px")) {
-          styleNumber = styleNumber / 16;
+        if (isFullBorderRadius(styleValue)) {
+          tailwindValue = "full";
+        } else {
+          if (styleValue.includes("px")) {
+            styleNumber = styleNumber / 16;
+          }
+          const size = getClosestValue(Object.keys(borderRadius), styleNumber);
+          tailwindValue = borderRadius[size];
         }
-        const size = getClosestValue(Object.keys(borderRadius), styleNumber);
-        tailwindValue = borderRadius[size];
         if (tailwindValue === "") {
           abbreviation = "";
           tailwindValue = "rounded";
@@ -966,10 +974,12 @@ export const convertAttributesDetailed = (
         (originalValue.trim() === "0" && tailwindValue === 0) ||
         (originalValue.trim().toLowerCase() === "auto" &&
           tailwindValue === "auto");
+      const isExactSemanticToken =
+        isExactSpacingToken || isFullBorderRadius(originalValue);
       const shouldUseExact =
         mode === "exact" && exactClass && !isExactSpacingToken;
       const status =
-        shouldUseExact || !exactClass || isExactSpacingToken
+        shouldUseExact || !exactClass || isExactSemanticToken
           ? "converted"
           : "approximated";
       result.push({
