@@ -52,6 +52,7 @@ const preservedWarningCategories = new Set([
   "relationship-based",
   "pseudo-element",
   "media-query",
+  "keyframes",
 ]);
 
 const reviewBadgeClasses: Record<Exclude<ReviewStatus, "all">, string> = {

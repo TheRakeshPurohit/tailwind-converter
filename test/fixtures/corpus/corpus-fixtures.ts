@@ -529,7 +529,7 @@ export const corpusFixtures: ConversionFixture[] = [
         { selector: ".spinner", property: "animation", category: "unsupported-property" },
       ],
       warnings: [
-        { selector: "@keyframes spin", category: "media-query" },
+        { selector: "@keyframes spin", category: "keyframes" },
       ],
     },
   },

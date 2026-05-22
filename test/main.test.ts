@@ -1102,6 +1102,36 @@ test("preserves unsupported media queries as leftover CSS", () => {
   ]);
 });
 
+test("classifies preserved keyframes separately from media queries", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="spinner"></div></body></html>`,
+    `.spinner { animation: spin 1s linear infinite; }
+     @keyframes spin { to { transform: rotate(360deg); } }`
+  );
+
+  expect(result.leftoverCss).toContain("@keyframes spin");
+  expect(result.warnings).toContainEqual({
+    selector: "@keyframes spin",
+    category: "keyframes",
+    message:
+      "Keyframes are preserved. animation and @keyframes conversion is not implemented yet.",
+  });
+  expect(result.warnings).not.toContainEqual(
+    expect.objectContaining({
+      selector: "@keyframes spin",
+      category: "media-query",
+    })
+  );
+  expect(result.preservedRules).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: "to",
+        category: "keyframes",
+      }),
+    ])
+  );
+});
+
 test("parses declaration values that break simple colon splitting", () => {
   const result = convertHtmlCss(
     `<html><body><div class="hero">Hero</div></body></html>`,

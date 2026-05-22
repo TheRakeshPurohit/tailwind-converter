@@ -63,6 +63,7 @@ export type UnsupportedCategory =
   | "relationship-based"
   | "pseudo-element"
   | "media-query"
+  | "keyframes"
   | "css-variable"
   | "compound-shorthand"
   | "tailwind-gap";
@@ -202,6 +203,10 @@ const getUnsupportedMessage = ({
 
   if (category === "media-query") {
     return "This at-rule is preserved because it does not match a default Tailwind responsive breakpoint.";
+  }
+
+  if (category === "keyframes") {
+    return "Keyframes are preserved. animation and @keyframes conversion is not implemented yet.";
   }
 
   if (normalizedProperty === "box-shadow") {
@@ -384,6 +389,12 @@ const breakpointPrefixes: { [query: string]: string } = {
 
 const atRuleToString = (atRule: AtRule) =>
   atRule.params ? `@${atRule.name} ${atRule.params}` : `@${atRule.name}`;
+
+const isKeyframesAtRule = (atRule: string) =>
+  /^@(?:-\w+-)?keyframes\b/.test(atRule);
+
+const unsupportedAtRuleCategory = (atRules: string[]): UnsupportedCategory =>
+  atRules.some(isKeyframesAtRule) ? "keyframes" : "media-query";
 
 const classPrefixForAtRules = (atRules: string[]) => {
   const prefixes: string[] = [];
@@ -1079,6 +1090,7 @@ export const cssToTailwindRules = (
   const unsupported: ConversionIssue[] = [];
   const warnings: ConversionIssue[] = [];
   const leftovers: string[] = [];
+  const warnedAtRules = new Set<string>();
 
   let root: postcss.Root;
   try {
@@ -1108,7 +1120,8 @@ export const cssToTailwindRules = (
   root.walkAtRules((atRule) => {
     if (atRule.name !== "media" && atRule.nodes?.some((node) => node.type === "rule")) {
       const selector = atRuleToString(atRule);
-      const category = "media-query";
+      const category = unsupportedAtRuleCategory([selector]);
+      warnedAtRules.add(selector);
       warnings.push({
         selector,
         category,
@@ -1149,16 +1162,19 @@ export const cssToTailwindRules = (
 
     if (unsupportedAtRule) {
       const selector = ruleAtRules.join(" ");
-      const category = "media-query";
-      warnings.push({
-        selector,
-        category,
-        message: getUnsupportedMessage({
+      const category = unsupportedAtRuleCategory(ruleAtRules);
+      if (!warnedAtRules.has(selector)) {
+        warnedAtRules.add(selector);
+        warnings.push({
+          selector,
           category,
-          fallbackMessage:
-            "This media query is preserved for review because it does not match a default Tailwind breakpoint.",
-        }),
-      });
+          message: getUnsupportedMessage({
+            category,
+            fallbackMessage:
+              "This at-rule is preserved for review because it cannot become a Tailwind variant.",
+          }),
+        });
+      }
     }
 
     rule.each((node) => {
@@ -1231,7 +1247,7 @@ export const cssToTailwindRules = (
       const selectorAnalysis = analyzeSelector(selector);
       const canApply = selectorAnalysis.canApply && !unsupportedAtRule;
       const preserveCategory = unsupportedAtRule
-        ? "media-query"
+        ? unsupportedAtRuleCategory(ruleAtRules)
         : classifyUnsupported({
             selector,
             fallback: "complex-selector",
