@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { convertHtmlCss } from "../src/util/helper";
 import { conversionFixtures } from "./fixtures/conversion-fixtures";
+import { corpusFixtures } from "./fixtures/corpus/corpus-fixtures";
 
 describe("conversion fixtures", () => {
-  test.each(conversionFixtures)("$name", ({ html, css, mode, expected }) => {
+  test.each([...conversionFixtures, ...corpusFixtures])("$name", ({ html, css, mode, expected }) => {
     const result = convertHtmlCss(html, css, mode);
 
     expected.htmlIncludes?.forEach((snippet) => {
