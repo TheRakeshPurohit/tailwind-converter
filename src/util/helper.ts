@@ -1135,6 +1135,7 @@ export const cssToTailwindRules = (
   });
 
   const selectorsNeededByDescendants = new Set<string>();
+  const selectorsNeededByPreservedAtRules = new Set<string>();
   root.walkRules((rule: Rule) => {
     splitSelectorList(rule.selector).forEach((selector) => {
       const selectorAnalysis = analyzeSelector(selector);
@@ -1146,6 +1147,25 @@ export const cssToTailwindRules = (
         if (part.startsWith(".")) selectorsNeededByDescendants.add(part);
       });
     });
+
+    const ruleAtRules: string[] = [];
+    let parent = rule.parent;
+    while (parent?.type === "atrule") {
+      ruleAtRules.unshift(atRuleToString(parent as AtRule));
+      parent = parent.parent;
+    }
+
+    if (ruleAtRules.length > 0 && !classPrefixForAtRules(ruleAtRules)) {
+      splitSelectorList(rule.selector).forEach((selector) => {
+        const selectorAnalysis = analyzeSelector(selector);
+        if (
+          selectorAnalysis.canApply &&
+          selectorAnalysis.applySelector.startsWith(".")
+        ) {
+          selectorsNeededByPreservedAtRules.add(selectorAnalysis.applySelector);
+        }
+      });
+    }
   });
 
   root.walkRules((rule: Rule) => {
@@ -1298,6 +1318,7 @@ export const cssToTailwindRules = (
       const preserveOriginalClass =
         Boolean(selectorAnalysis.preserveOriginalClass) ||
         selectorsNeededByDescendants.has(selectorAnalysis.applySelector) ||
+        selectorsNeededByPreservedAtRules.has(selectorAnalysis.applySelector) ||
         !canApply ||
         unsupportedDeclarations.length > 0;
       const classNames = declarationsResult

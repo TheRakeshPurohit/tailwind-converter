@@ -1103,6 +1103,38 @@ test("preserves unsupported media queries as leftover CSS", () => {
   ]);
 });
 
+test("keeps original classes needed by preserved max-width media queries", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="stats-grid"><div>Revenue</div><div>Users</div><div>Storage</div></div></body></html>`,
+    `.stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }`
+  );
+
+  expect(result.html).toContain(
+    'class="stats-grid grid grid-cols-3 gap-5"'
+  );
+  expect(result.leftoverCss).toContain("@media (max-width: 768px)");
+  expect(result.leftoverCss).toContain(".stats-grid {");
+  expect(result.leftoverCss).toContain("grid-template-columns: 1fr;");
+  expect(result.rules).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".stats-grid",
+        preserveOriginalClass: true,
+      }),
+    ])
+  );
+});
+
 test("classifies preserved keyframes separately from media queries", () => {
   const result = convertHtmlCss(
     `<html><body><div class="spinner"></div></body></html>`,
@@ -1282,6 +1314,17 @@ test("preserves full document body classes in converted preview docs", () => {
     ".bg-\\[\\#f4f6f8\\]{background-color: #f4f6f8;}"
   );
   expect(result).not.toContain("<body><html>");
+});
+
+test("places generated preview css before preserved converted css", () => {
+  const result = buildPreviewDoc(
+    `<html><head><style>@media (max-width: 768px) {.stats-grid {grid-template-columns: 1fr;}}</style></head><body><div class="stats-grid grid grid-cols-3"></div></body></html>`,
+    `.grid-cols-3{grid-template-columns: repeat(3, minmax(0, 1fr));}`
+  );
+
+  expect(result.indexOf(".grid-cols-3")).toBeLessThan(
+    result.indexOf("@media (max-width: 768px)")
+  );
 });
 
 test("preview border reset keeps border-bottom utilities from drawing full borders", () => {

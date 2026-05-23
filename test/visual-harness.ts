@@ -107,8 +107,8 @@ const buildConvertedDocument = (html: string) => {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-${head}
 <style>${generatedCss}</style>
+${head}
 </head>
 <body${bodyAttributes}>${body}</body>
 </html>`;

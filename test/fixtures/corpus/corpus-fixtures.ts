@@ -145,7 +145,7 @@ export const corpusFixtures: ConversionFixture[] = [
     expected: {
       htmlIncludes: [
         'class="py-12 px-4 bg-white"',
-        'class="max-w-4xl my-0 mx-auto grid grid-cols-2 gap-6"',
+        'class="pricing-inner max-w-4xl my-0 mx-auto grid grid-cols-2 gap-6"',
         'class="plan -translate-y-2 p-6 border border-solid border-gray-200 rounded-xl shadow-lg"',
       ],
       leftoverIncludes: ["@media (max-width: 767px)"],

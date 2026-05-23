@@ -53,7 +53,12 @@ export const buildPreviewDoc = (html: string, css: string) => {
 
   const style = doc.createElement("style");
   style.textContent = safeCss;
-  doc.head.appendChild(style);
+  const firstAuthoredStyle = doc.head.querySelector("style,link[rel='stylesheet']");
+  if (firstAuthoredStyle) {
+    doc.head.insertBefore(style, firstAuthoredStyle);
+  } else {
+    doc.head.appendChild(style);
+  }
 
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 };
