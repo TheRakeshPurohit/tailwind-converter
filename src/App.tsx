@@ -154,7 +154,7 @@ function App() {
   const firstSync = useRef(false);
 
   const maxHeight = {
-    maxHeight: "calc(100% - 5.25rem)",
+    maxHeight: "calc(100% - 4rem)",
   };
   const copyToClipboard = () => {
     toast("Copied to clipboard!", {
@@ -389,7 +389,7 @@ function App() {
         <Header onThemeChange={handleThemeChange} />
         <ResizablePanelGroup
           direction="horizontal"
-          className="h-40 border"
+          className="h-40 border-t"
           style={maxHeight}
           aria-label="html/css code mirror panels"
         >

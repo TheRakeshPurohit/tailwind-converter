@@ -28,7 +28,7 @@ export function Header({ onThemeChange }: HeaderProps) {
   };
 
   return (
-    <header className="mb-4 border-b">
+    <header>
       <div className="flex items-center justify-between h-16 px-4">
         <h1 className="text-lg font-semibold sm:text-xl">
           HTML/CSS to Tailwind Converter
