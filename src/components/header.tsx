@@ -62,10 +62,6 @@ export function Header({ onThemeChange }: HeaderProps) {
                   .
                 </DialogDescription>
                 <DialogTitle className="mt-4">Note</DialogTitle>
-                <DialogDescription className="text-base font-bold text-gray-800 dark:text-gray-300">
-                  *This project is a work in progress. There may be bugs or
-                  incomplete features*
-                </DialogDescription>
                 <DialogDescription className="text-base text-gray-800 dark:text-gray-300">
                   Keep in mind that converting an existing project to use
                   Tailwind CSS often involves more than just replacing classes.
