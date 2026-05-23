@@ -7,14 +7,55 @@ type UtilityRule = {
   media?: string;
 };
 
+const hasDocumentShell = (html: string) => /<\/?(html|head|body)\b/i.test(html);
+
 export const sanitizePreviewHtml = (html: string) => {
   return DOMPurify.sanitize(html, {
     FORBID_TAGS: ["script"],
+    WHOLE_DOCUMENT: hasDocumentShell(html),
   });
 };
 
 export const sanitizePreviewCss = (css: string) => {
   return css.replace(/<\/style/gi, "<\\/style");
+};
+
+export const buildPreviewDoc = (html: string, css: string) => {
+  const safeCss = sanitizePreviewCss(css);
+
+  if (!hasDocumentShell(html)) {
+    return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>${safeCss}</style>
+</head>
+<body>${html}</body>
+</html>`;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  let viewport = doc.querySelector("meta[name='viewport']");
+  if (!viewport) {
+    viewport = doc.createElement("meta");
+    viewport.setAttribute("name", "viewport");
+    viewport.setAttribute("content", "width=device-width, initial-scale=1");
+    doc.head.appendChild(viewport);
+  }
+
+  if (!doc.querySelector("meta[charset]")) {
+    const charset = doc.createElement("meta");
+    charset.setAttribute("charset", "utf-8");
+    doc.head.prepend(charset);
+  }
+
+  const style = doc.createElement("style");
+  style.textContent = safeCss;
+  doc.head.appendChild(style);
+
+  return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 };
 
 const breakpoints: { [variant: string]: string } = {

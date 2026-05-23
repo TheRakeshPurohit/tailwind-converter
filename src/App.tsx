@@ -31,6 +31,7 @@ import { Toaster } from "sonner";
 import { track } from "@vercel/analytics";
 import type { ConversionMode } from "./util/converter";
 import {
+  buildPreviewDoc,
   generatePreviewCss,
   sanitizePreviewCss,
   sanitizePreviewHtml,
@@ -298,24 +299,11 @@ function App() {
   const generatedPreviewCss = sanitizePreviewCss(
     generatePreviewCss(sanitizedTailwindText)
   );
-  const originalPreviewDoc = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>${sanitizedCssText}</style>
-</head>
-<body>${sanitizedHtmlText}</body>
-</html>`;
-  const convertedPreviewDoc = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>${generatedPreviewCss}</style>
-</head>
-<body>${sanitizedTailwindText}</body>
-</html>`;
+  const originalPreviewDoc = buildPreviewDoc(sanitizedHtmlText, sanitizedCssText);
+  const convertedPreviewDoc = buildPreviewDoc(
+    sanitizedTailwindText,
+    generatedPreviewCss
+  );
   const previewIsStale =
     Boolean(tailwindText) &&
     (lastConversionInput.html !== htmlText ||

@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { convertHtmlCss, cssToJson } from "../src/util/helper";
 import { parser } from "../src/util/helper";
 import {
+  buildPreviewDoc,
   generatePreviewCss,
   sanitizePreviewCss,
   sanitizePreviewHtml,
@@ -1250,6 +1251,17 @@ test("sanitizes preview html by removing scripts and event handlers", () => {
   expect(result).not.toContain("onclick");
 });
 
+test("sanitizes preview documents without removing body classes", () => {
+  const result = sanitizePreviewHtml(
+    `<html><head></head><body class="bg-[#f4f6f8]"><main onclick="alert('x')">Dashboard</main><script>alert("x")</script></body></html>`
+  );
+
+  expect(result).toContain('<body class="bg-[#f4f6f8]">');
+  expect(result).toContain("<main>Dashboard</main>");
+  expect(result).not.toContain("<script");
+  expect(result).not.toContain("onclick");
+});
+
 test("escapes style closing tags in preview css", () => {
   const result = sanitizePreviewCss(
     `body { color: red; }</style><script>alert("x")</script>`
@@ -1257,6 +1269,19 @@ test("escapes style closing tags in preview css", () => {
 
   expect(result).toContain("<\\/style>");
   expect(result).toContain("<script>");
+});
+
+test("preserves full document body classes in converted preview docs", () => {
+  const result = buildPreviewDoc(
+    `<html><head></head><body class="bg-[#f4f6f8]"><main>Dashboard</main></body></html>`,
+    `.bg-\\[\\#f4f6f8\\]{background-color: #f4f6f8;}`
+  );
+
+  expect(result).toContain('<body class="bg-[#f4f6f8]">');
+  expect(result).toContain(
+    ".bg-\\[\\#f4f6f8\\]{background-color: #f4f6f8;}"
+  );
+  expect(result).not.toContain("<body><html>");
 });
 
 test("generates scriptless preview css for common Tailwind classes", () => {
