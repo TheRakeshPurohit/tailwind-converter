@@ -345,6 +345,9 @@ const cssEscape = (className: string) => {
   return className.replace(/(^-?\d)|[^a-zA-Z0-9_-]/g, "\\$&");
 };
 
+const previewPreflightCss =
+  "*,::before,::after{border-width:0;border-style:solid;}";
+
 const extractClassNames = (html: string) => {
   const classNames = new Set<string>();
   const regex = /\bclass=(?:"([^"]*)"|'([^']*)')/g;
@@ -642,7 +645,7 @@ const declarationsForUtility = (utility: string) => {
   }
 
   const colorMatch = utility.match(
-    /^(text|bg|border|border-t|border-r|border-b|border-l|decoration|outline|accent|caret|fill|stroke)-(.+)$/
+    /^(text|bg|border-t|border-r|border-b|border-l|border|decoration|outline|accent|caret|fill|stroke)-(.+)$/
   );
   if (colorMatch) {
     const [, prefix, color] = colorMatch;
@@ -787,5 +790,5 @@ export const generatePreviewCss = (html: string) => {
     ([media, mediaRule]) => `@media ${media}{${mediaRule.join("")}}`
   );
 
-  return [...regularRules, ...responsiveRules].join("\n");
+  return [previewPreflightCss, ...regularRules, ...responsiveRules].join("\n");
 };

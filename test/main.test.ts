@@ -1284,6 +1284,23 @@ test("preserves full document body classes in converted preview docs", () => {
   expect(result).not.toContain("<body><html>");
 });
 
+test("preview border reset keeps border-bottom utilities from drawing full borders", () => {
+  const result = generatePreviewCss(
+    `<div class="flex border-b border-solid border-b-gray-200"></div>`
+  );
+
+  expect(result).toContain(
+    "*,::before,::after{border-width:0;border-style:solid;}"
+  );
+  expect(result.indexOf("border-width:0")).toBeLessThan(
+    result.indexOf(".border-b{border-bottom-width: 1px;}")
+  );
+  expect(result).toContain(".border-solid{border-style: solid;}");
+  expect(result).toContain(
+    ".border-b-gray-200{border-bottom-color: #e5e7eb;}"
+  );
+});
+
 test("generates scriptless preview css for common Tailwind classes", () => {
   const result = generatePreviewCss(
     `<div class="m-4 mx-auto py-2 px-4 p-[17px] text-red-600 text-[#123456] text-[color:blue] text-[17px] bg-white border border-b border-b-[3px] border-t-[color:blue] border-solid rounded-md rounded-[7px] shadow-lg shadow-[0_7px_22px_rgba(0\\,_0\\,_0\\,_0.16)] hover:text-blue-700 md:p-8"></div>`
