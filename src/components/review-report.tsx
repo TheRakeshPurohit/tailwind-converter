@@ -1,16 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ConversionResult } from "@/util/helper";
-import { Copy } from "lucide-react";
+import { AlertTriangle, Copy, Eye } from "lucide-react";
 import type { ReactNode } from "react";
-import type { ReviewStatus } from "@/types";
+import type { OutputView, ReviewStatus } from "@/types";
 import { preservedWarningCategories } from "@/util/review";
 
 type ReviewReportProps = {
   conversionResult: ConversionResult | null;
   copyLeftoverCss: () => void;
+  previewIsStale: boolean;
   reviewSelector: string;
   reviewStatus: ReviewStatus;
+  setOutputView: (view: OutputView) => void;
   setReviewSelector: (selector: string) => void;
   setReviewStatus: (status: ReviewStatus) => void;
 };
@@ -94,8 +96,10 @@ function ReviewBadge({
 export function ReviewReport({
   conversionResult,
   copyLeftoverCss,
+  previewIsStale,
   reviewSelector,
   reviewStatus,
+  setOutputView,
   setReviewSelector,
   setReviewStatus,
 }: ReviewReportProps) {
@@ -217,19 +221,75 @@ export function ReviewReport({
                   conversions
                 </p>
               </div>
-              {conversionResult.leftoverCss && (
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  onClick={copyLeftoverCss}
+                  onClick={() => setOutputView("preview")}
                   variant="outline"
                   size="sm"
                   className="cursor-pointer"
                 >
-                  <Copy />
-                  Copy preserved CSS
+                  <Eye />
+                  Open preview
                 </Button>
-              )}
+                {conversionResult.leftoverCss && (
+                  <Button
+                    onClick={copyLeftoverCss}
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer"
+                  >
+                    <Copy />
+                    Copy preserved CSS
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
+          {previewIsStale && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-destructive">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <h3 className="font-medium">
+                  Review is based on an older conversion
+                </h3>
+                <p className="text-xs">
+                  Convert again before relying on the report or visual preview.
+                </p>
+              </div>
+            </div>
+          )}
+          {conversionResult.leftoverCss && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 p-3 text-sm">
+              <div>
+                <h3 className="font-medium text-foreground">
+                  Preserved CSS is included in the converted preview
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Check these rules in Review, then compare the result in
+                  Preview before copying the output.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => setReviewStatus("preserved")}
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  Show preserved
+                </Button>
+                <Button
+                  onClick={() => setOutputView("preview")}
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  <Eye />
+                  Compare preview
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <select
               aria-label="selector filter"

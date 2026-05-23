@@ -459,22 +459,27 @@ function App() {
                     <ReviewReport
                       conversionResult={conversionResult}
                       copyLeftoverCss={copyLeftoverCss}
+                      previewIsStale={previewIsStale}
                       reviewSelector={reviewSelector}
                       reviewStatus={reviewStatus}
+                      setOutputView={setOutputView}
                       setReviewSelector={setReviewSelector}
                       setReviewStatus={setReviewStatus}
                     />
                   )}
                   {outputView === "preview" && (
                     <PreviewPanel
+                      conversionResult={conversionResult}
                       convertedPreviewDoc={convertedPreviewDoc}
                       originalPreviewDoc={originalPreviewDoc}
                       previewIsStale={previewIsStale}
                       previewMode={previewMode}
                       previewViewport={previewViewport}
                       segmentedButtonClass={segmentedButtonClass}
+                      setOutputView={setOutputView}
                       setPreviewMode={setPreviewMode}
                       setPreviewViewport={setPreviewViewport}
+                      setReviewStatus={setReviewStatus}
                     />
                   )}
                 </div>
