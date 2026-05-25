@@ -132,6 +132,29 @@ const gridTemplateRows = Object.fromEntries(
     ];
   })
 );
+const gridColumnSpans = Object.fromEntries(
+  Array.from({ length: 12 }, (_, index) => {
+    const count = index + 1;
+    return [`col-span-${count}`, `grid-column: span ${count} / span ${count};`];
+  })
+);
+const gridRowSpans = Object.fromEntries(
+  Array.from({ length: 12 }, (_, index) => {
+    const count = index + 1;
+    return [`row-span-${count}`, `grid-row: span ${count} / span ${count};`];
+  })
+);
+const gridLineUtilities = Object.fromEntries(
+  ["col-start", "col-end", "row-start", "row-end"].flatMap((prefix) =>
+    Array.from({ length: 13 }, (_, index) => {
+      const line = index + 1;
+      const property = prefix
+        .replace("col", "grid-column")
+        .replace("row", "grid-row");
+      return [`${prefix}-${line}`, `${property}: ${line};`];
+    })
+  )
+);
 
 const staticUtilities: { [utility: string]: string } = {
   block: "display: block;",
@@ -152,6 +175,7 @@ const staticUtilities: { [utility: string]: string } = {
   "flex-col-reverse": "flex-direction: column-reverse;",
   "flex-wrap": "flex-wrap: wrap;",
   "flex-nowrap": "flex-wrap: nowrap;",
+  "flex-wrap-reverse": "flex-wrap: wrap-reverse;",
   "flex-1": "flex: 1 1 0%;",
   "flex-auto": "flex: 1 1 auto;",
   "flex-initial": "flex: 0 1 auto;",
@@ -166,11 +190,57 @@ const staticUtilities: { [utility: string]: string } = {
   "justify-between": "justify-content: space-between;",
   "justify-around": "justify-content: space-around;",
   "justify-evenly": "justify-content: space-evenly;",
+  "justify-items-start": "justify-items: start;",
+  "justify-items-end": "justify-items: end;",
+  "justify-items-center": "justify-items: center;",
+  "justify-items-stretch": "justify-items: stretch;",
+  "justify-self-auto": "justify-self: auto;",
+  "justify-self-start": "justify-self: start;",
+  "justify-self-end": "justify-self: end;",
+  "justify-self-center": "justify-self: center;",
+  "justify-self-stretch": "justify-self: stretch;",
+  "content-center": "align-content: center;",
+  "content-start": "align-content: flex-start;",
+  "content-end": "align-content: flex-end;",
+  "content-between": "align-content: space-between;",
+  "content-around": "align-content: space-around;",
+  "content-evenly": "align-content: space-evenly;",
+  "self-auto": "align-self: auto;",
+  "self-start": "align-self: flex-start;",
+  "self-end": "align-self: flex-end;",
+  "self-center": "align-self: center;",
+  "self-stretch": "align-self: stretch;",
+  "self-baseline": "align-self: baseline;",
   "items-start": "align-items: flex-start;",
   "items-end": "align-items: flex-end;",
   "items-center": "align-items: center;",
   "items-baseline": "align-items: baseline;",
   "items-stretch": "align-items: stretch;",
+  "place-content-center": "place-content: center;",
+  "place-content-start": "place-content: start;",
+  "place-content-end": "place-content: end;",
+  "place-content-between": "place-content: space-between;",
+  "place-content-around": "place-content: space-around;",
+  "place-content-evenly": "place-content: space-evenly;",
+  "place-content-stretch": "place-content: stretch;",
+  "place-items-start": "place-items: start;",
+  "place-items-end": "place-items: end;",
+  "place-items-center": "place-items: center;",
+  "place-items-stretch": "place-items: stretch;",
+  "place-self-auto": "place-self: auto;",
+  "place-self-start": "place-self: start;",
+  "place-self-end": "place-self: end;",
+  "place-self-center": "place-self: center;",
+  "place-self-stretch": "place-self: stretch;",
+  "float-right": "float: right;",
+  "float-left": "float: left;",
+  "float-none": "float: none;",
+  "clear-left": "clear: left;",
+  "clear-right": "clear: right;",
+  "clear-both": "clear: both;",
+  "clear-none": "clear: none;",
+  isolate: "isolation: isolate;",
+  "isolation-auto": "isolation: auto;",
   "list-none": "list-style-type: none;",
   "list-disc": "list-style-type: disc;",
   "list-decimal": "list-style-type: decimal;",
@@ -184,6 +254,11 @@ const staticUtilities: { [utility: string]: string } = {
   overline: "text-decoration-line: overline;",
   "line-through": "text-decoration-line: line-through;",
   "no-underline": "text-decoration-line: none;",
+  "decoration-solid": "text-decoration-style: solid;",
+  "decoration-double": "text-decoration-style: double;",
+  "decoration-dotted": "text-decoration-style: dotted;",
+  "decoration-dashed": "text-decoration-style: dashed;",
+  "decoration-wavy": "text-decoration-style: wavy;",
   uppercase: "text-transform: uppercase;",
   lowercase: "text-transform: lowercase;",
   capitalize: "text-transform: capitalize;",
@@ -244,7 +319,12 @@ const staticUtilities: { [utility: string]: string } = {
   "border-dashed": "border-style: dashed;",
   "border-dotted": "border-style: dotted;",
   "border-double": "border-style: double;",
+  "border-hidden": "border-style: hidden;",
   "border-none": "border-style: none;",
+  outline: "outline-style: solid;",
+  "outline-dashed": "outline-style: dashed;",
+  "outline-dotted": "outline-style: dotted;",
+  "outline-double": "outline-style: double;",
   "rounded-none": "border-radius: 0;",
   "rounded-sm": "border-radius: 0.125rem;",
   rounded: "border-radius: 0.25rem;",
@@ -278,6 +358,15 @@ const staticUtilities: { [utility: string]: string } = {
   "object-fill": "object-fit: fill;",
   "object-none": "object-fit: none;",
   "object-scale-down": "object-fit: scale-down;",
+  "object-bottom": "object-position: bottom;",
+  "object-center": "object-position: center;",
+  "object-left": "object-position: left;",
+  "object-left-bottom": "object-position: left bottom;",
+  "object-left-top": "object-position: left top;",
+  "object-right": "object-position: right;",
+  "object-right-bottom": "object-position: right bottom;",
+  "object-right-top": "object-position: right top;",
+  "object-top": "object-position: top;",
   "appearance-none": "appearance: none;",
   "pointer-events-none": "pointer-events: none;",
   "pointer-events-auto": "pointer-events: auto;",
@@ -289,10 +378,70 @@ const staticUtilities: { [utility: string]: string } = {
   "resize-y": "resize: vertical;",
   "resize-x": "resize: horizontal;",
   resize: "resize: both;",
+  "overscroll-auto": "overscroll-behavior: auto;",
+  "overscroll-contain": "overscroll-behavior: contain;",
+  "overscroll-none": "overscroll-behavior: none;",
+  "overscroll-x-auto": "overscroll-behavior-x: auto;",
+  "overscroll-x-contain": "overscroll-behavior-x: contain;",
+  "overscroll-x-none": "overscroll-behavior-x: none;",
+  "overscroll-y-auto": "overscroll-behavior-y: auto;",
+  "overscroll-y-contain": "overscroll-behavior-y: contain;",
+  "overscroll-y-none": "overscroll-behavior-y: none;",
+  "scroll-auto": "scroll-behavior: auto;",
+  "scroll-smooth": "scroll-behavior: smooth;",
+  "snap-none": "scroll-snap-type: none;",
+  "snap-start": "scroll-snap-align: start;",
+  "snap-end": "scroll-snap-align: end;",
+  "snap-center": "scroll-snap-align: center;",
+  "snap-align-none": "scroll-snap-align: none;",
+  "snap-normal": "scroll-snap-stop: normal;",
+  "snap-always": "scroll-snap-stop: always;",
+  "touch-auto": "touch-action: auto;",
+  "touch-none": "touch-action: none;",
+  "touch-pan-x": "touch-action: pan-x;",
+  "touch-pan-left": "touch-action: pan-left;",
+  "touch-pan-right": "touch-action: pan-right;",
+  "touch-pan-y": "touch-action: pan-y;",
+  "touch-pan-up": "touch-action: pan-up;",
+  "touch-pan-down": "touch-action: pan-down;",
+  "touch-pinch-zoom": "touch-action: pinch-zoom;",
+  "touch-manipulation": "touch-action: manipulation;",
+  "will-change-auto": "will-change: auto;",
+  "will-change-scroll": "will-change: scroll-position;",
+  "will-change-contents": "will-change: contents;",
+  "will-change-transform": "will-change: transform;",
+  "border-collapse": "border-collapse: collapse;",
+  "border-separate": "border-collapse: separate;",
+  "table-auto": "table-layout: auto;",
+  "table-fixed": "table-layout: fixed;",
+  "stroke-0": "stroke-width: 0;",
+  "stroke-1": "stroke-width: 1;",
+  "stroke-2": "stroke-width: 2;",
   "grid-cols-none": "grid-template-columns: none;",
   "grid-cols-subgrid": "grid-template-columns: subgrid;",
   "grid-rows-none": "grid-template-rows: none;",
   "grid-rows-subgrid": "grid-template-rows: subgrid;",
+  "col-auto": "grid-column: auto;",
+  "row-auto": "grid-row: auto;",
+  "col-span-full": "grid-column: 1 / -1;",
+  "row-span-full": "grid-row: 1 / -1;",
+  "col-start-auto": "grid-column-start: auto;",
+  "col-end-auto": "grid-column-end: auto;",
+  "row-start-auto": "grid-row-start: auto;",
+  "row-end-auto": "grid-row-end: auto;",
+  "auto-rows-auto": "grid-auto-rows: auto;",
+  "auto-rows-min": "grid-auto-rows: min-content;",
+  "auto-rows-max": "grid-auto-rows: max-content;",
+  "auto-rows-fr": "grid-auto-rows: minmax(0, 1fr);",
+  "auto-cols-auto": "grid-auto-columns: auto;",
+  "auto-cols-min": "grid-auto-columns: min-content;",
+  "auto-cols-max": "grid-auto-columns: max-content;",
+  "auto-cols-fr": "grid-auto-columns: minmax(0, 1fr);",
+  "grid-flow-row": "grid-auto-flow: row;",
+  "grid-flow-col": "grid-auto-flow: column;",
+  "grid-flow-dense": "grid-auto-flow: dense;",
+  "grid-flow-row-dense": "grid-auto-flow: row dense;",
+  "grid-flow-col-dense": "grid-auto-flow: column dense;",
   transition:
     "transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter; transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);",
   "transition-none": "transition-property: none;",
@@ -323,6 +472,13 @@ const staticUtilities: { [utility: string]: string } = {
   "bg-fixed": "background-attachment: fixed;",
   "bg-local": "background-attachment: local;",
   "bg-scroll": "background-attachment: scroll;",
+  "bg-clip-border": "background-clip: border-box;",
+  "bg-clip-padding": "background-clip: padding-box;",
+  "bg-clip-content": "background-clip: content-box;",
+  "bg-clip-text": "background-clip: text;",
+  "bg-origin-border": "background-origin: border-box;",
+  "bg-origin-padding": "background-origin: padding-box;",
+  "bg-origin-content": "background-origin: content-box;",
   "bg-bottom": "background-position: bottom;",
   "bg-center": "background-position: center;",
   "bg-left": "background-position: left;",
@@ -341,9 +497,54 @@ const staticUtilities: { [utility: string]: string } = {
   "bg-auto": "background-size: auto;",
   "bg-cover": "background-size: cover;",
   "bg-contain": "background-size: contain;",
+  "origin-center": "transform-origin: center;",
+  "origin-top": "transform-origin: top;",
+  "origin-top-right": "transform-origin: top right;",
+  "origin-right": "transform-origin: right;",
+  "origin-bottom-right": "transform-origin: bottom right;",
+  "origin-bottom": "transform-origin: bottom;",
+  "origin-bottom-left": "transform-origin: bottom left;",
+  "origin-left": "transform-origin: left;",
+  "origin-top-left": "transform-origin: top left;",
+  "mix-blend-normal": "mix-blend-mode: normal;",
+  "mix-blend-multiply": "mix-blend-mode: multiply;",
+  "mix-blend-screen": "mix-blend-mode: screen;",
+  "mix-blend-overlay": "mix-blend-mode: overlay;",
+  "mix-blend-darken": "mix-blend-mode: darken;",
+  "mix-blend-lighten": "mix-blend-mode: lighten;",
+  "mix-blend-color-dodge": "mix-blend-mode: color-dodge;",
+  "mix-blend-color-burn": "mix-blend-mode: color-burn;",
+  "mix-blend-hard-light": "mix-blend-mode: hard-light;",
+  "mix-blend-soft-light": "mix-blend-mode: soft-light;",
+  "mix-blend-difference": "mix-blend-mode: difference;",
+  "mix-blend-exclusion": "mix-blend-mode: exclusion;",
+  "mix-blend-hue": "mix-blend-mode: hue;",
+  "mix-blend-saturation": "mix-blend-mode: saturation;",
+  "mix-blend-color": "mix-blend-mode: color;",
+  "mix-blend-luminosity": "mix-blend-mode: luminosity;",
+  "mix-blend-plus-lighter": "mix-blend-mode: plus-lighter;",
+  "bg-blend-normal": "background-blend-mode: normal;",
+  "bg-blend-multiply": "background-blend-mode: multiply;",
+  "bg-blend-screen": "background-blend-mode: screen;",
+  "bg-blend-overlay": "background-blend-mode: overlay;",
+  "bg-blend-darken": "background-blend-mode: darken;",
+  "bg-blend-lighten": "background-blend-mode: lighten;",
+  "bg-blend-color-dodge": "background-blend-mode: color-dodge;",
+  "bg-blend-color-burn": "background-blend-mode: color-burn;",
+  "bg-blend-hard-light": "background-blend-mode: hard-light;",
+  "bg-blend-soft-light": "background-blend-mode: soft-light;",
+  "bg-blend-difference": "background-blend-mode: difference;",
+  "bg-blend-exclusion": "background-blend-mode: exclusion;",
+  "bg-blend-hue": "background-blend-mode: hue;",
+  "bg-blend-saturation": "background-blend-mode: saturation;",
+  "bg-blend-color": "background-blend-mode: color;",
+  "bg-blend-luminosity": "background-blend-mode: luminosity;",
   ...fontSizes,
   ...gridTemplates,
   ...gridTemplateRows,
+  ...gridColumnSpans,
+  ...gridRowSpans,
+  ...gridLineUtilities,
 };
 
 const cssEscape = (className: string) => {
@@ -407,6 +608,14 @@ const maxWidthValues: { [value: string]: string } = {
 
 const sizeValue = (prefix: string, value: string) => {
   if (prefix === "max-w" && maxWidthValues[value]) return maxWidthValues[value];
+  if (
+    ["outline", "outline-offset", "decoration", "underline-offset"].includes(
+      prefix
+    ) &&
+    /^(0|1|2|4|8)$/.test(value)
+  ) {
+    return `${value}px`;
+  }
   return spacingValue(value);
 };
 
@@ -506,6 +715,21 @@ const declarationsForFilterUtility = (utility: string) => {
 const declarationsForUtility = (utility: string) => {
   if (staticUtilities[utility]) return staticUtilities[utility];
 
+  const negativeTrackingMatch = utility.match(
+    /^-tracking-(tighter|tight|normal|wide|wider|widest)$/
+  );
+  if (negativeTrackingMatch) {
+    const trackingValues: { [value: string]: string } = {
+      tighter: "0.05em",
+      tight: "0.025em",
+      normal: "0em",
+      wide: "0.025em",
+      wider: "0.05em",
+      widest: "0.1em",
+    };
+    return `letter-spacing: -${trackingValues[negativeTrackingMatch[1]]};`;
+  }
+
   const arbitrarySideBorderWidth = utility.match(
     /^border-([trbl])-\[(.+)\]$/
   );
@@ -574,6 +798,12 @@ const declarationsForUtility = (utility: string) => {
       shadow: "box-shadow",
       "grid-cols": "grid-template-columns",
       "grid-rows": "grid-template-rows",
+      col: "grid-column",
+      row: "grid-row",
+      "col-start": "grid-column-start",
+      "col-end": "grid-column-end",
+      "row-start": "grid-row-start",
+      "row-end": "grid-row-end",
       bg:
         typeHint !== "color" &&
         (cssValue.startsWith("url(") || cssValue.includes("gradient("))
@@ -586,55 +816,108 @@ const declarationsForUtility = (utility: string) => {
       "border-l": "border-left-color",
       decoration: "text-decoration-color",
       outline: "outline-color",
+      "outline-offset": "outline-offset",
       accent: "accent-color",
       caret: "caret-color",
       fill: "fill",
       stroke: "stroke",
+      columns: "columns",
+      "scroll-m": "scroll-margin",
+      "scroll-mt": "scroll-margin-top",
+      "scroll-mr": "scroll-margin-right",
+      "scroll-mb": "scroll-margin-bottom",
+      "scroll-ml": "scroll-margin-left",
+      "scroll-p": "scroll-padding",
+      "scroll-pt": "scroll-padding-top",
+      "scroll-pr": "scroll-padding-right",
+      "scroll-pb": "scroll-padding-bottom",
+      "scroll-pl": "scroll-padding-left",
+      "underline-offset": "text-underline-offset",
     };
     const property = arbitraryProperties[prefix];
     return property ? `${property}: ${cssValue};` : "";
   }
 
   const spacingMatch = utility.match(
-    /^(m|mx|my|mt|mr|mb|ml|p|px|py|pt|pr|pb|pl|w|h|min-w|min-h|max-w|max-h|basis|top|right|bottom|left|gap|gap-x|gap-y)-(.+)$/
+    /^(-)?(min-w|min-h|max-w|max-h|gap-x|gap-y|scroll-mt|scroll-mr|scroll-mb|scroll-ml|scroll-m|scroll-pt|scroll-pr|scroll-pb|scroll-pl|scroll-p|outline-offset|underline-offset|decoration|outline|basis|top|right|bottom|left|mx|my|mt|mr|mb|ml|px|py|pt|pr|pb|pl|m|p|w|h|gap)-(.+)$/
   );
   if (spacingMatch) {
-    const [, prefix, value] = spacingMatch;
+    const [, negative, prefix, value] = spacingMatch;
     const cssValue = sizeValue(prefix, value);
-    if (!cssValue) return "";
-    const properties: { [prefix: string]: string[] } = {
-      m: ["margin"],
-      mx: ["margin-left", "margin-right"],
-      my: ["margin-top", "margin-bottom"],
-      mt: ["margin-top"],
-      mr: ["margin-right"],
-      mb: ["margin-bottom"],
-      ml: ["margin-left"],
-      p: ["padding"],
-      px: ["padding-left", "padding-right"],
-      py: ["padding-top", "padding-bottom"],
-      pt: ["padding-top"],
-      pr: ["padding-right"],
-      pb: ["padding-bottom"],
-      pl: ["padding-left"],
-      w: ["width"],
-      h: ["height"],
-      "min-w": ["min-width"],
-      "min-h": ["min-height"],
-      "max-w": ["max-width"],
-      "max-h": ["max-height"],
-      basis: ["flex-basis"],
-      top: ["top"],
-      right: ["right"],
-      bottom: ["bottom"],
-      left: ["left"],
-      gap: ["gap"],
-      "gap-x": ["column-gap"],
-      "gap-y": ["row-gap"],
+    if (cssValue) {
+      const signedCssValue =
+        negative && !["0rem", "0px"].includes(cssValue)
+          ? `-${cssValue}`
+          : cssValue;
+      const properties: { [prefix: string]: string[] } = {
+        m: ["margin"],
+        mx: ["margin-left", "margin-right"],
+        my: ["margin-top", "margin-bottom"],
+        mt: ["margin-top"],
+        mr: ["margin-right"],
+        mb: ["margin-bottom"],
+        ml: ["margin-left"],
+        p: ["padding"],
+        px: ["padding-left", "padding-right"],
+        py: ["padding-top", "padding-bottom"],
+        pt: ["padding-top"],
+        pr: ["padding-right"],
+        pb: ["padding-bottom"],
+        pl: ["padding-left"],
+        w: ["width"],
+        h: ["height"],
+        "min-w": ["min-width"],
+        "min-h": ["min-height"],
+        "max-w": ["max-width"],
+        "max-h": ["max-height"],
+        basis: ["flex-basis"],
+        top: ["top"],
+        right: ["right"],
+        bottom: ["bottom"],
+        left: ["left"],
+        gap: ["gap"],
+        "gap-x": ["column-gap"],
+        "gap-y": ["row-gap"],
+        "scroll-m": ["scroll-margin"],
+        "scroll-mt": ["scroll-margin-top"],
+        "scroll-mr": ["scroll-margin-right"],
+        "scroll-mb": ["scroll-margin-bottom"],
+        "scroll-ml": ["scroll-margin-left"],
+        "scroll-p": ["scroll-padding"],
+        "scroll-pt": ["scroll-padding-top"],
+        "scroll-pr": ["scroll-padding-right"],
+        "scroll-pb": ["scroll-padding-bottom"],
+        "scroll-pl": ["scroll-padding-left"],
+        outline: ["outline-width"],
+        "outline-offset": ["outline-offset"],
+        decoration: ["text-decoration-thickness"],
+        "underline-offset": ["text-underline-offset"],
+      };
+      return properties[prefix]
+        .map((property) => `${property}: ${signedCssValue};`)
+        .join("");
+    }
+  }
+
+  const columnsMatch = utility.match(/^columns-(auto|\d+|3xs|2xs|xs|sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl)$/);
+  if (columnsMatch) {
+    const value = columnsMatch[1];
+    const columnValues: { [value: string]: string } = {
+      "3xs": "16rem",
+      "2xs": "18rem",
+      xs: "20rem",
+      sm: "24rem",
+      md: "28rem",
+      lg: "32rem",
+      xl: "36rem",
+      "2xl": "42rem",
+      "3xl": "48rem",
+      "4xl": "56rem",
+      "5xl": "64rem",
+      "6xl": "72rem",
+      "7xl": "80rem",
     };
-    return properties[prefix]
-      .map((property) => `${property}: ${cssValue};`)
-      .join("");
+    return `columns: ${columnValues[value] ?? value};`;
   }
 
   const sideBorderWidth = utility.match(/^border-([trbl])-(0|2|4|8)$/);
@@ -676,6 +959,9 @@ const declarationsForUtility = (utility: string) => {
 
   const opacityMatch = utility.match(/^opacity-(\d+)$/);
   if (opacityMatch) return `opacity: ${Number(opacityMatch[1]) / 100};`;
+
+  const leadingMatch = utility.match(/^leading-(\d+)$/);
+  if (leadingMatch) return `line-height: ${Number(leadingMatch[1]) / 4}rem;`;
 
   const filterUtility = declarationsForFilterUtility(utility);
   if (filterUtility) return filterUtility;

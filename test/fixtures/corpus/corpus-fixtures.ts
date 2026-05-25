@@ -80,7 +80,7 @@ export const corpusFixtures: ConversionFixture[] = [
       ],
       leftoverIncludes: [".hero::before", "background-image: linear-gradient"],
       unsupported: [
-        { selector: ".hero", property: "background-image", category: "unsupported-property" },
+        { selector: ".hero", property: "background-image", category: "background-image" },
       ],
       warnings: [
         { selector: ".hero::before", category: "pseudo-element" },
@@ -526,7 +526,7 @@ export const corpusFixtures: ConversionFixture[] = [
       ],
       leftoverIncludes: ["animation: spin 1s linear infinite", "@keyframes spin"],
       unsupported: [
-        { selector: ".spinner", property: "animation", category: "unsupported-property" },
+        { selector: ".spinner", property: "animation", category: "animation" },
       ],
       warnings: [
         { selector: "@keyframes spin", category: "keyframes" },

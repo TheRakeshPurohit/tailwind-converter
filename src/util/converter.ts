@@ -181,6 +181,20 @@ const exactClassFor = (property: string, value: string) => {
   if (property === "grid-template-rows") {
     return `grid-rows-[${arbitraryValue(value)}]`;
   }
+  if (property === "grid-column") return `col-[${arbitraryValue(value)}]`;
+  if (property === "grid-row") return `row-[${arbitraryValue(value)}]`;
+  if (property === "grid-column-start") {
+    return `col-start-[${arbitraryValue(value)}]`;
+  }
+  if (property === "grid-column-end") {
+    return `col-end-[${arbitraryValue(value)}]`;
+  }
+  if (property === "grid-row-start") {
+    return `row-start-[${arbitraryValue(value)}]`;
+  }
+  if (property === "grid-row-end") {
+    return `row-end-[${arbitraryValue(value)}]`;
+  }
   return "";
 };
 
@@ -210,6 +224,61 @@ const gridTemplateClassFor = (property: string, value: string) => {
   }
 
   return "";
+};
+
+const isGridLineNumber = (value: string) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 13;
+};
+
+const isGridSpanNumber = (value: string) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 12;
+};
+
+const gridLineClassFor = (prefix: string, value: string) => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "auto") return `${prefix}-auto`;
+  if (isGridLineNumber(normalized)) return `${prefix}-${normalized}`;
+  return "";
+};
+
+const gridPlacementClassFor = (property: "grid-column" | "grid-row", value: string) => {
+  const axis = property === "grid-column" ? "col" : "row";
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s+/g, " ");
+
+  if (normalized === "auto") return `${axis}-auto`;
+  if (normalized === "1 / -1") return `${axis}-span-full`;
+
+  const spanMatch = normalized.match(/^span (\d+) \/ span \1$/);
+  if (spanMatch && isGridSpanNumber(spanMatch[1])) {
+    return `${axis}-span-${spanMatch[1]}`;
+  }
+
+  const lineMatch = normalized.match(/^(\d+) \/ (\d+)$/);
+  if (lineMatch) {
+    const [, start, end] = lineMatch;
+    if (isGridLineNumber(start) && isGridLineNumber(end)) {
+      return `${axis}-start-${start} ${axis}-end-${end}`;
+    }
+  }
+
+  return "";
+};
+
+const gridPlacementLonghandClassFor = (property: string, value: string) => {
+  const prefixes: { [property: string]: string } = {
+    "grid-column-start": "col-start",
+    "grid-column-end": "col-end",
+    "grid-row-start": "row-start",
+    "grid-row-end": "row-end",
+  };
+
+  return prefixes[property] ? gridLineClassFor(prefixes[property], value) : "";
 };
 
 const normalizeTransitionProperty = (value: string) =>
@@ -692,6 +761,33 @@ export const convertAttributesDetailed = (
       style === "grid-template-rows"
     ) {
       tailwindValue = gridTemplateClassFor(style, styleValue);
+    } else if (style === "grid-column" || style === "grid-row") {
+      const gridClass = gridPlacementClassFor(style, styleValue);
+      if (gridClass) {
+        result.push({
+          property: style,
+          value: originalValue,
+          className: gridClass,
+          status: "converted",
+        });
+        continue;
+      }
+    } else if (
+      style === "grid-column-start" ||
+      style === "grid-column-end" ||
+      style === "grid-row-start" ||
+      style === "grid-row-end"
+    ) {
+      const gridClass = gridPlacementLonghandClassFor(style, styleValue);
+      if (gridClass) {
+        result.push({
+          property: style,
+          value: originalValue,
+          className: gridClass,
+          status: "converted",
+        });
+        continue;
+      }
     } else if (style === "transition-duration") {
       abbreviation = "duration";
       if (!styleValue.includes("ms")) styleNumber = styleNumber * 1000;

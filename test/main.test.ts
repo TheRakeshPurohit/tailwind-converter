@@ -184,7 +184,7 @@ test("reports unsupported declarations instead of dropping them silently", () =>
       selector: ".card",
       property: "animation",
       value: "pulse 1s infinite",
-      category: "unsupported-property",
+      category: "animation",
       message:
         "Animations are preserved. animation and @keyframes conversion is not implemented yet.",
     },
@@ -320,6 +320,100 @@ test("converts none and subgrid grid templates", () => {
 
   expect(result.html).toContain('class="grid-cols-subgrid grid-rows-none"');
   expect(result.leftoverCss).toBe("");
+});
+
+test("converts common grid placement shorthands", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout"><div class="item">Item</div></section></body></html>`,
+    `.item {
+      grid-column: span 2 / span 2;
+      grid-row: 1 / 3;
+    }`
+  );
+
+  expect(result.html).toContain(
+    'class="col-span-2 row-start-1 row-end-3"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".item",
+        property: "grid-column",
+        value: "span 2 / span 2",
+        className: "col-span-2",
+      }),
+      expect.objectContaining({
+        selector: ".item",
+        property: "grid-row",
+        value: "1 / 3",
+        className: "row-start-1 row-end-3",
+      }),
+    ])
+  );
+});
+
+test("converts grid placement longhands", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout"><div class="item">Item</div></section></body></html>`,
+    `.item {
+      grid-column-start: 2;
+      grid-column-end: 4;
+      grid-row-start: auto;
+    }`
+  );
+
+  expect(result.html).toContain(
+    'class="col-start-2 col-end-4 row-start-auto"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves complex grid placement in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout"><div class="item">Item</div></section></body></html>`,
+    `.item { grid-column: main-start / main-end; }`
+  );
+
+  expect(result.html).toContain('class="item"');
+  expect(result.leftoverCss).toContain("grid-column: main-start / main-end;");
+  expect(result.unsupported).toEqual([
+    expect.objectContaining({
+      selector: ".item",
+      property: "grid-column",
+      value: "main-start / main-end",
+      category: "grid-placement",
+      message:
+        "Grid placement is preserved. Mapping spans and line numbers to Tailwind is not implemented yet.",
+    }),
+  ]);
+});
+
+test("can prefer exact arbitrary grid placement values", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="layout"><div class="item">Item</div></section></body></html>`,
+    `.item { grid-column: main-start / main-end; grid-row-start: content; }`,
+    "exact"
+  );
+
+  expect(result.html).toContain(
+    'class="col-[main-start_/_main-end] row-start-[content]"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.converted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".item",
+        property: "grid-column",
+        className: "col-[main-start_/_main-end]",
+      }),
+      expect.objectContaining({
+        selector: ".item",
+        property: "grid-row-start",
+        className: "row-start-[content]",
+      }),
+    ])
+  );
 });
 
 test("preserves complex grid templates in token mode", () => {
@@ -550,6 +644,9 @@ test("preserves unsupported filter functions", () => {
       selector: ".card",
       property: "filter",
       value: "blur(8px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.2))",
+      category: "filter-effect",
+      message:
+        "This filter chain is preserved because one or more filter functions cannot be mapped to supported Tailwind filter utilities.",
     }),
   ]);
 });
@@ -977,7 +1074,7 @@ test("preserves background images in token mode", () => {
       selector: ".hero",
       property: "background-image",
       value: 'url("/hero.png")',
-      category: "unsupported-property",
+      category: "background-image",
       message:
         "Background images and gradients are preserved in token mode. Use Exact mode to emit an arbitrary background image utility.",
     }),
@@ -1160,6 +1257,29 @@ test("classifies preserved keyframes separately from media queries", () => {
       expect.objectContaining({
         selector: "to",
         category: "keyframes",
+      }),
+    ])
+  );
+});
+
+test("classifies preserved container queries separately from media queries", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `@container (min-width: 32rem) { .card { padding: 2rem; } }`
+  );
+
+  expect(result.leftoverCss).toContain("@container (min-width: 32rem)");
+  expect(result.warnings).toContainEqual({
+    selector: "@container (min-width: 32rem)",
+    category: "container-query",
+    message:
+      "Container queries are preserved. Tailwind container query conversion is not implemented yet.",
+  });
+  expect(result.preservedRules).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".card",
+        category: "container-query",
       }),
     ])
   );
@@ -1468,9 +1588,32 @@ test("generates scriptless preview css for background placement utilities", () =
   expect(result).toContain(".bg-contain{background-size: contain;}");
 });
 
+test("generates scriptless preview css for grid placement utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="col-auto row-auto col-span-2 row-span-full col-start-1 col-end-3 row-start-auto row-end-4 col-[main-start_/_main-end] row-start-[content]"></section>`
+  );
+
+  expect(result).toContain(".col-auto{grid-column: auto;}");
+  expect(result).toContain(".row-auto{grid-row: auto;}");
+  expect(result).toContain(
+    ".col-span-2{grid-column: span 2 / span 2;}"
+  );
+  expect(result).toContain(".row-span-full{grid-row: 1 / -1;}");
+  expect(result).toContain(".col-start-1{grid-column-start: 1;}");
+  expect(result).toContain(".col-end-3{grid-column-end: 3;}");
+  expect(result).toContain(".row-start-auto{grid-row-start: auto;}");
+  expect(result).toContain(".row-end-4{grid-row-end: 4;}");
+  expect(result).toContain(
+    ".col-\\[main-start_\\/_main-end\\]{grid-column: main-start / main-end;}"
+  );
+  expect(result).toContain(
+    ".row-start-\\[content\\]{grid-row-start: content;}"
+  );
+});
+
 test("generates scriptless preview css for common converter layout utilities", () => {
   const result = generatePreviewCss(
-    `<section class="flex-1 basis-1/2 min-w-0 min-h-screen max-w-6xl h-full top-4 z-10 order-first overflow-hidden list-none no-underline cursor-pointer appearance-none pointer-events-none select-none resize-y tracking-wide opacity-75"></section>`
+    `<section class="flex-1 basis-1/2 min-w-0 min-h-screen max-w-6xl h-full top-4 -left-2 z-10 order-first overflow-hidden list-none no-underline cursor-pointer appearance-none pointer-events-none select-none resize-y tracking-wide opacity-75"></section>`
   );
 
   expect(result).toContain(".flex-1{flex: 1 1 0%;}");
@@ -1480,6 +1623,7 @@ test("generates scriptless preview css for common converter layout utilities", (
   expect(result).toContain(".max-w-6xl{max-width: 72rem;}");
   expect(result).toContain(".h-full{height: 100%;}");
   expect(result).toContain(".top-4{top: 1rem;}");
+  expect(result).toContain(".-left-2{left: -0.5rem;}");
   expect(result).toContain(".z-10{z-index: 10;}");
   expect(result).toContain(".order-first{order: -9999;}");
   expect(result).toContain(".overflow-hidden{overflow: hidden;}");
@@ -1492,6 +1636,55 @@ test("generates scriptless preview css for common converter layout utilities", (
   expect(result).toContain(".resize-y{resize: vertical;}");
   expect(result).toContain(".tracking-wide{letter-spacing: 0.025em;}");
   expect(result).toContain(".opacity-75{opacity: 0.75;}");
+});
+
+test("generates scriptless preview css for broader converter utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="float-left clear-both isolate justify-items-center self-end place-content-between object-right-top bg-clip-padding bg-origin-content border-hidden outline outline-2 outline-offset-4 decoration-wavy decoration-2 underline-offset-4 overscroll-y-contain scroll-smooth snap-start snap-always touch-pan-x will-change-transform border-collapse table-fixed auto-rows-fr auto-cols-min grid-flow-row-dense origin-top-left mix-blend-multiply bg-blend-overlay columns-3 scroll-mt-6 scroll-pl-4 stroke-2"></section>`
+  );
+
+  expect(result).toContain(".float-left{float: left;}");
+  expect(result).toContain(".clear-both{clear: both;}");
+  expect(result).toContain(".isolate{isolation: isolate;}");
+  expect(result).toContain(".justify-items-center{justify-items: center;}");
+  expect(result).toContain(".self-end{align-self: flex-end;}");
+  expect(result).toContain(
+    ".place-content-between{place-content: space-between;}"
+  );
+  expect(result).toContain(".object-right-top{object-position: right top;}");
+  expect(result).toContain(".bg-clip-padding{background-clip: padding-box;}");
+  expect(result).toContain(
+    ".bg-origin-content{background-origin: content-box;}"
+  );
+  expect(result).toContain(".border-hidden{border-style: hidden;}");
+  expect(result).toContain(".outline{outline-style: solid;}");
+  expect(result).toContain(".outline-2{outline-width: 2px;}");
+  expect(result).toContain(".outline-offset-4{outline-offset: 4px;}");
+  expect(result).toContain(".decoration-wavy{text-decoration-style: wavy;}");
+  expect(result).toContain(".decoration-2{text-decoration-thickness: 2px;}");
+  expect(result).toContain(
+    ".underline-offset-4{text-underline-offset: 4px;}"
+  );
+  expect(result).toContain(
+    ".overscroll-y-contain{overscroll-behavior-y: contain;}"
+  );
+  expect(result).toContain(".scroll-smooth{scroll-behavior: smooth;}");
+  expect(result).toContain(".snap-start{scroll-snap-align: start;}");
+  expect(result).toContain(".snap-always{scroll-snap-stop: always;}");
+  expect(result).toContain(".touch-pan-x{touch-action: pan-x;}");
+  expect(result).toContain(".will-change-transform{will-change: transform;}");
+  expect(result).toContain(".border-collapse{border-collapse: collapse;}");
+  expect(result).toContain(".table-fixed{table-layout: fixed;}");
+  expect(result).toContain(".auto-rows-fr{grid-auto-rows: minmax(0, 1fr);}");
+  expect(result).toContain(".auto-cols-min{grid-auto-columns: min-content;}");
+  expect(result).toContain(".grid-flow-row-dense{grid-auto-flow: row dense;}");
+  expect(result).toContain(".origin-top-left{transform-origin: top left;}");
+  expect(result).toContain(".mix-blend-multiply{mix-blend-mode: multiply;}");
+  expect(result).toContain(".bg-blend-overlay{background-blend-mode: overlay;}");
+  expect(result).toContain(".columns-3{columns: 3;}");
+  expect(result).toContain(".scroll-mt-6{scroll-margin-top: 1.5rem;}");
+  expect(result).toContain(".scroll-pl-4{scroll-padding-left: 1rem;}");
+  expect(result).toContain(".stroke-2{stroke-width: 2;}");
 });
 
 test("generates scriptless preview css for exact axis and positioning utilities", () => {

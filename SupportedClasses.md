@@ -122,7 +122,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 
 - Container queries
 - CSS variables as Tailwind theme tokens
-- Complex grid templates and grid line placement
+- Advanced grid templates and complex named grid placement
 - Space-between utilities from sibling relationships
 - Divide and ring utilities
 - Drop shadow
@@ -146,7 +146,7 @@ Some Tailwind utility families are not generated because their underlying CSS is
 | `divide-*` | Child/sibling border selectors | Not converted |
 | `space-x-*`, `space-y-*` | Child/sibling margin selectors | Not converted |
 | `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Supports `none`, `subgrid`, and `repeat(1..12, minmax(0, 1fr))`. Exact mode uses arbitrary values. |
-| `col-span-*`, `row-span-*`, `col-start-*`, `row-start-*` | `grid-column`, `grid-row` | Mostly not converted |
+| `col-span-*`, `row-span-*`, `col-start-*`, `col-end-*`, `row-start-*`, `row-end-*` | `grid-column`, `grid-row`, and grid placement longhands | Supports `auto`, `span n / span n`, `1 / -1`, simple numeric line ranges, and numeric/auto longhands. Exact mode uses arbitrary values for complex placement. |
 | Arbitrary `bg` background image utilities | `background-image` | Exact mode only. Tokens mode preserves background images and gradients for review. |
 | Gradient utilities such as `from-*`, `via-*`, `to-*` | Gradient stops | Not converted |
 | `animate-*` | `animation`, `@keyframes` | Not converted |

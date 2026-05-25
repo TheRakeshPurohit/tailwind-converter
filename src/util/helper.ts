@@ -59,6 +59,9 @@ type NormalizedDeclarations = {
 export type UnsupportedCategory =
   | "unsupported-property"
   | "unsupported-value"
+  | "animation"
+  | "background-image"
+  | "container-query"
   | "complex-selector"
   | "relationship-based"
   | "pseudo-element"
@@ -66,6 +69,8 @@ export type UnsupportedCategory =
   | "keyframes"
   | "css-variable"
   | "compound-shorthand"
+  | "filter-effect"
+  | "grid-placement"
   | "tailwind-gap";
 
 export type ConversionIssue = {
@@ -157,6 +162,15 @@ const classifyUnsupported = ({
 
   if (selector.includes("::")) return "pseudo-element";
   if (/\s|>|\+|~/.test(selector.trim())) return "relationship-based";
+  if (normalizedProperty === "animation") return "animation";
+  if (normalizedProperty === "background-image") return "background-image";
+  if (normalizedValue.includes("gradient(")) return "background-image";
+  if (normalizedProperty === "filter" || normalizedProperty === "backdrop-filter") {
+    return "filter-effect";
+  }
+  if (normalizedProperty === "grid-column" || normalizedProperty === "grid-row") {
+    return "grid-placement";
+  }
   if (normalizedValue.includes("var(")) return "css-variable";
   if (normalizedProperty && tailwindGapProperties.has(normalizedProperty)) {
     return "tailwind-gap";
@@ -177,7 +191,6 @@ const classifyUnsupported = ({
 
 const getUnsupportedMessage = ({
   property,
-  value,
   category,
   fallbackMessage,
 }: {
@@ -187,7 +200,6 @@ const getUnsupportedMessage = ({
   fallbackMessage: string;
 }) => {
   const normalizedProperty = property?.toLowerCase();
-  const normalizedValue = value?.toLowerCase() ?? "";
 
   if (category === "css-variable") {
     return "CSS variable values are preserved. Tailwind theme token mapping is not implemented yet.";
@@ -209,18 +221,19 @@ const getUnsupportedMessage = ({
     return "Keyframes are preserved. animation and @keyframes conversion is not implemented yet.";
   }
 
+  if (category === "container-query") {
+    return "Container queries are preserved. Tailwind container query conversion is not implemented yet.";
+  }
+
   if (normalizedProperty === "box-shadow") {
     return "This box-shadow value is preserved because it could not be mapped to a Tailwind shadow utility.";
   }
 
-  if (
-    normalizedProperty === "background-image" ||
-    normalizedValue.includes("gradient(")
-  ) {
+  if (category === "background-image") {
     return "Background images and gradients are preserved in token mode. Use Exact mode to emit an arbitrary background image utility.";
   }
 
-  if (normalizedProperty === "animation") {
+  if (category === "animation") {
     return "Animations are preserved. animation and @keyframes conversion is not implemented yet.";
   }
 
@@ -231,8 +244,12 @@ const getUnsupportedMessage = ({
     return "This grid template is preserved because it could not be mapped to a supported Tailwind grid utility.";
   }
 
-  if (normalizedProperty === "grid-column" || normalizedProperty === "grid-row") {
+  if (category === "grid-placement") {
     return "Grid placement is preserved. Mapping spans and line numbers to Tailwind is not implemented yet.";
+  }
+
+  if (category === "filter-effect") {
+    return "This filter chain is preserved because one or more filter functions cannot be mapped to supported Tailwind filter utilities.";
   }
 
   if (normalizedProperty === "transition-property") {
@@ -393,8 +410,13 @@ const atRuleToString = (atRule: AtRule) =>
 const isKeyframesAtRule = (atRule: string) =>
   /^@(?:-\w+-)?keyframes\b/.test(atRule);
 
-const unsupportedAtRuleCategory = (atRules: string[]): UnsupportedCategory =>
-  atRules.some(isKeyframesAtRule) ? "keyframes" : "media-query";
+const unsupportedAtRuleCategory = (atRules: string[]): UnsupportedCategory => {
+  if (atRules.some(isKeyframesAtRule)) return "keyframes";
+  if (atRules.some((atRule) => /^@container\b/.test(atRule))) {
+    return "container-query";
+  }
+  return "media-query";
+};
 
 const classPrefixForAtRules = (atRules: string[]) => {
   const prefixes: string[] = [];
