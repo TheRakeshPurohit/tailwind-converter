@@ -226,6 +226,86 @@ const gridTemplateClassFor = (property: string, value: string) => {
   return "";
 };
 
+const gradientDirections: { [direction: string]: string } = {
+  "to top": "t",
+  "to top right": "tr",
+  "to right top": "tr",
+  "to right": "r",
+  "to bottom right": "br",
+  "to right bottom": "br",
+  "to bottom": "b",
+  "to bottom left": "bl",
+  "to left bottom": "bl",
+  "to left": "l",
+  "to top left": "tl",
+  "to left top": "tl",
+};
+
+const splitFunctionArguments = (node: FunctionNode) => {
+  const args: string[] = [];
+  let current = "";
+
+  node.nodes.forEach((child) => {
+    if (child.type === "div" && child.value === ",") {
+      if (current.trim()) args.push(current.trim());
+      current = "";
+    } else {
+      current += valueParser.stringify(child);
+    }
+  });
+
+  if (current.trim()) args.push(current.trim());
+  return args;
+};
+
+const gradientStopClassFor = (
+  prefix: "from" | "via" | "to",
+  value: string,
+  mode: ConversionMode
+) => {
+  const normalized = value.trim().toLowerCase();
+  const hasPosition = /\s(?:-?\d*\.?\d+(?:px|rem|em|%)|calc\()/.test(normalized);
+  if (!normalized || hasPosition || normalized.includes("var(")) return "";
+
+  if (mode === "exact") {
+    return exactColorClassFor(prefix, value);
+  }
+
+  try {
+    if (exactColorTokenAliases[normalized]) {
+      return `${prefix}-${exactColorTokenAliases[normalized]}`;
+    }
+    return `${prefix}-${NearestColor.from(colorCodes)(normalized).name}`;
+  } catch {
+    return "";
+  }
+};
+
+const linearGradientClassesFor = (value: string, mode: ConversionMode) => {
+  const parsed = valueParser(value);
+  const nodes = parsed.nodes.filter((node) => node.type !== "space");
+  if (nodes.length !== 1 || nodes[0].type !== "function") return [];
+
+  const gradient = nodes[0] as FunctionNode;
+  if (gradient.value.toLowerCase() !== "linear-gradient") return [];
+
+  const args = splitFunctionArguments(gradient);
+  if (args.length < 3 || args.length > 4) return [];
+
+  const direction = args[0].trim().toLowerCase().replace(/\s+/g, " ");
+  const directionClass = gradientDirections[direction];
+  if (!directionClass) return [];
+
+  const stopClasses = args.slice(1).map((stop, index, stops) => {
+    const prefix = index === 0 ? "from" : index === stops.length - 1 ? "to" : "via";
+    return gradientStopClassFor(prefix, stop, mode);
+  });
+
+  return stopClasses.every(Boolean)
+    ? [`bg-linear-to-${directionClass}`, ...stopClasses]
+    : [];
+};
+
 const isGridLineNumber = (value: string) => {
   const number = Number(value);
   return Number.isInteger(number) && number >= 1 && number <= 13;
@@ -756,6 +836,23 @@ export const convertAttributesDetailed = (
       tailwindValue = styleValue;
     } else if (style === "box-shadow") {
       tailwindValue = shadowClassFor(styleValue);
+    } else if (style === "background-image") {
+      const gradientClasses = linearGradientClassesFor(originalValue, mode);
+      if (gradientClasses.length > 0) {
+        gradientClasses.forEach((className) => {
+          result.push({
+            property: style,
+            value: originalValue,
+            className,
+            status: mode === "exact" ? "converted" : "approximated",
+            message:
+              mode === "exact"
+                ? undefined
+                : "Mapped to the nearest Tailwind design token."
+          });
+        });
+        continue;
+      }
     } else if (
       style === "grid-template-columns" ||
       style === "grid-template-rows"

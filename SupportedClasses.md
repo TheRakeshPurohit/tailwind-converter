@@ -126,7 +126,7 @@ Compound background shorthands such as `background: url(...) center / cover no-r
 - Space-between utilities from sibling relationships
 - Divide and ring utilities
 - Drop shadow
-- Background images and gradients in token mode
+- Background images and complex gradients in token mode
 - Animation
 - Border spacing
 - Screen reader utilities
@@ -147,8 +147,8 @@ Some Tailwind utility families are not generated because their underlying CSS is
 | `space-x-*`, `space-y-*` | Child/sibling margin selectors | Not converted |
 | `grid-cols-*`, `grid-rows-*` | `grid-template-columns`, `grid-template-rows` | Supports `none`, `subgrid`, and `repeat(1..12, minmax(0, 1fr))`. Exact mode uses arbitrary values. |
 | `col-span-*`, `row-span-*`, `col-start-*`, `col-end-*`, `row-start-*`, `row-end-*` | `grid-column`, `grid-row`, and grid placement longhands | Supports `auto`, `span n / span n`, `1 / -1`, simple numeric line ranges, and numeric/auto longhands. Exact mode uses arbitrary values for complex placement. |
-| Arbitrary `bg` background image utilities | `background-image` | Exact mode only. Tokens mode preserves background images and gradients for review. |
-| Gradient utilities such as `from-*`, `via-*`, `to-*` | Gradient stops | Not converted |
+| Arbitrary `bg` background image utilities | `background-image` | Exact mode for URLs and complex gradients. Tokens mode preserves background images for review. |
+| Gradient utilities such as `bg-linear-to-*`, `from-*`, `via-*`, `to-*` | Simple `linear-gradient(...)` values | Supports two- and three-stop directional gradients such as `to right` and `to bottom right`. Complex angles, positions, variables, radial/conic gradients, and layered backgrounds are preserved or exact arbitrary backgrounds. |
 | `animate-*` | `animation`, `@keyframes` | Not converted |
 | `transition-*`, `ease-*` | `transition-property`, `transition-duration`, `transition-delay`, `transition-timing-function` | Supports common Tailwind transition families and conservative one-item `transition` shorthands. Exact mode uses arbitrary values. |
 | `container` and container query utilities | Container sizing/query behavior | Not converted |

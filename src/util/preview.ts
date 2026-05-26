@@ -497,6 +497,22 @@ const staticUtilities: { [utility: string]: string } = {
   "bg-auto": "background-size: auto;",
   "bg-cover": "background-size: cover;",
   "bg-contain": "background-size: contain;",
+  "bg-linear-to-t":
+    "background-image: linear-gradient(to top, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-tr":
+    "background-image: linear-gradient(to top right, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-r":
+    "background-image: linear-gradient(to right, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-br":
+    "background-image: linear-gradient(to bottom right, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-b":
+    "background-image: linear-gradient(to bottom, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-bl":
+    "background-image: linear-gradient(to bottom left, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-l":
+    "background-image: linear-gradient(to left, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
+  "bg-linear-to-tl":
+    "background-image: linear-gradient(to top left, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));",
   "origin-center": "transform-origin: center;",
   "origin-top": "transform-origin: top;",
   "origin-top-right": "transform-origin: top right;",
@@ -712,8 +728,31 @@ const declarationsForFilterUtility = (utility: string) => {
   return prefix ? "" : "";
 };
 
+const declarationsForGradientStopUtility = (utility: string) => {
+  const match = utility.match(/^(from|via|to)-(.+)$/);
+  if (!match) return "";
+
+  const [, prefix, color] = match;
+  const arbitraryColor = color.match(/^\[(.+)\]$/);
+  const cssColor = arbitraryColor
+    ? arbitraryValueParts(arbitraryColor[1]).cssValue
+    : colorValue(color);
+  if (!cssColor) return "";
+
+  if (prefix === "from") {
+    return `--tw-gradient-from: ${cssColor};--tw-gradient-to: transparent;--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);`;
+  }
+  if (prefix === "via") {
+    return `--tw-gradient-stops: var(--tw-gradient-from), ${cssColor}, var(--tw-gradient-to);`;
+  }
+  return `--tw-gradient-to: ${cssColor};`;
+};
+
 const declarationsForUtility = (utility: string) => {
   if (staticUtilities[utility]) return staticUtilities[utility];
+
+  const gradientStopUtility = declarationsForGradientStopUtility(utility);
+  if (gradientStopUtility) return gradientStopUtility;
 
   const negativeTrackingMatch = utility.match(
     /^-tracking-(tighter|tight|normal|wide|wider|widest)$/

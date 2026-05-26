@@ -1010,44 +1010,98 @@ test("preserves layered compound background shorthand", () => {
   ]);
 });
 
-test("preserves background image shorthand in token mode", () => {
+test("converts simple linear gradients in token mode", () => {
   const result = convertHtmlCss(
     `<html><body><section class="hero">Hero</section></body></html>`,
     `.hero { background: linear-gradient(to right, red, blue); padding: 1rem; }`
   );
 
+  expect(result.html).toContain(
+    'class="bg-linear-to-r from-red-600 to-blue-700 p-4"'
+  );
+  expect(result.leftoverCss).toBe("");
+  expect(result.approximated).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".hero",
+        property: "background-image",
+        value: "linear-gradient(to right, red, blue)",
+        className: "bg-linear-to-r",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "background-image",
+        value: "linear-gradient(to right, red, blue)",
+        className: "from-red-600",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "background-image",
+        value: "linear-gradient(to right, red, blue)",
+        className: "to-blue-700",
+      }),
+    ])
+  );
+});
+
+test("converts simple three-stop linear gradients in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background-image: linear-gradient(to bottom right, #2563eb, white, #0f766e); }`
+  );
+
+  expect(result.html).toContain(
+    'class="bg-linear-to-br from-blue-600 via-white to-teal-700"'
+  );
+  expect(result.leftoverCss).toBe("");
+});
+
+test("preserves complex gradients in token mode", () => {
+  const result = convertHtmlCss(
+    `<html><body><section class="hero">Hero</section></body></html>`,
+    `.hero { background: linear-gradient(135deg, red, blue); padding: 1rem; }`
+  );
+
   expect(result.html).toContain('class="hero p-4"');
   expect(result.leftoverCss).toContain(
-    "background-image: linear-gradient(to right, red, blue);"
+    "background-image: linear-gradient(135deg, red, blue);"
   );
   expect(result.unsupported).toEqual([
     expect.objectContaining({
       selector: ".hero",
       property: "background-image",
-      value: "linear-gradient(to right, red, blue)",
+      value: "linear-gradient(135deg, red, blue)",
     }),
   ]);
 });
 
-test("can prefer exact arbitrary background shorthand gradients", () => {
+test("can prefer exact arbitrary gradient stop colors", () => {
   const result = convertHtmlCss(
     `<html><body><section class="hero">Hero</section></body></html>`,
-    `.hero { background: linear-gradient(to right, red, blue); }`,
+    `.hero { background: linear-gradient(to right, #123456, rgb(1, 2, 3)); }`,
     "exact"
   );
 
   expect(result.html).toContain(
-    'class="bg-[linear-gradient(to_right\\,_red\\,_blue)]"'
+    'class="bg-linear-to-r from-[#123456] to-[rgb(1\\,_2\\,_3)]"'
   );
   expect(result.leftoverCss).toBe("");
-  expect(result.converted).toEqual([
-    expect.objectContaining({
-      selector: ".hero",
-      property: "background-image",
-      value: "linear-gradient(to right, red, blue)",
-      className: "bg-[linear-gradient(to_right\\,_red\\,_blue)]",
-    }),
-  ]);
+  expect(result.converted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        selector: ".hero",
+        property: "background-image",
+        value: "linear-gradient(to right, #123456, rgb(1, 2, 3))",
+        className: "from-[#123456]",
+      }),
+      expect.objectContaining({
+        selector: ".hero",
+        property: "background-image",
+        value: "linear-gradient(to right, #123456, rgb(1, 2, 3))",
+        className: "to-[rgb(1\\,_2\\,_3)]",
+      }),
+    ])
+  );
 });
 
 test("can prefer exact arbitrary background shorthand urls", () => {
@@ -1102,12 +1156,12 @@ test("can prefer exact arbitrary background image urls", () => {
 test("can prefer exact arbitrary background gradients", () => {
   const result = convertHtmlCss(
     `<html><body><section class="hero">Hero</section></body></html>`,
-    `.hero { background-image: linear-gradient(to right, red, blue); }`,
+    `.hero { background-image: linear-gradient(135deg, red, blue); }`,
     "exact"
   );
 
   expect(result.html).toContain(
-    'class="bg-[linear-gradient(to_right\\,_red\\,_blue)]"'
+    'class="bg-[linear-gradient(135deg\\,_red\\,_blue)]"'
   );
   expect(result.leftoverCss).toBe("");
 });
@@ -1572,6 +1626,25 @@ test("generates scriptless preview css for arbitrary background images", () => {
   );
   expect(result).toContain(
     ".bg-\\[linear-gradient\\(to_right\\\\\\,_red\\\\\\,_blue\\)\\]{background-image: linear-gradient(to right, red, blue);}"
+  );
+});
+
+test("generates scriptless preview css for gradient utilities", () => {
+  const result = generatePreviewCss(
+    `<section class="bg-linear-to-r from-red-600 via-[color:white] to-[rgb(1\\,_2\\,_3)]"></section>`
+  );
+
+  expect(result).toContain(
+    ".bg-linear-to-r{background-image: linear-gradient(to right, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));}"
+  );
+  expect(result).toContain(
+    ".from-red-600{--tw-gradient-from: #dc2626;--tw-gradient-to: transparent;--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);}"
+  );
+  expect(result).toContain(
+    ".via-\\[color\\:white\\]{--tw-gradient-stops: var(--tw-gradient-from), white, var(--tw-gradient-to);}"
+  );
+  expect(result).toContain(
+    ".to-\\[rgb\\(1\\\\\\,_2\\\\\\,_3\\)\\]{--tw-gradient-to: rgb(1, 2, 3);}"
   );
 });
 
