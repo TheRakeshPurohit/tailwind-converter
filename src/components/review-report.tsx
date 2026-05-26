@@ -1,6 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ConversionResult } from "@/util/helper";
+import type {
+  ConversionIssue,
+  ConversionResult,
+  PreservedRule,
+  UnsupportedCategory,
+} from "@/util/helper";
 import { AlertTriangle, Copy, Eye } from "lucide-react";
 import type { ReactNode } from "react";
 import type { OutputView, ReviewStatus } from "@/types";
@@ -52,8 +57,8 @@ const countPillClass =
 
 const reviewCardClass = "rounded-md border border-border/70 bg-card/30 p-3";
 
-const categoryPillClass =
-  "rounded-md border border-border/70 bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground";
+const categorySummaryClass =
+  "rounded-md border border-border/70 bg-card/30 p-3";
 
 const reviewStatusLabels: Record<ReviewStatus, string> = {
   all: "All",
@@ -63,6 +68,95 @@ const reviewStatusLabels: Record<ReviewStatus, string> = {
   preserved: "Preserved",
   warnings: "Warnings",
 };
+
+const reviewCategoryLabels: Record<UnsupportedCategory, string> = {
+  animation: "Animations",
+  "background-image": "Background Images",
+  "compound-shorthand": "Compound Shorthands",
+  "complex-selector": "Complex Selectors",
+  "container-query": "Container Queries",
+  "css-variable": "CSS Variables",
+  "filter-effect": "Filter Effects",
+  "grid-placement": "Grid Placement",
+  keyframes: "Keyframes",
+  "media-query": "Media Queries",
+  "pseudo-element": "Pseudo-elements",
+  "relationship-based": "Related Selectors",
+  "tailwind-gap": "Tailwind Gaps",
+  "unsupported-property": "Unsupported Properties",
+  "unsupported-value": "Unsupported Values",
+};
+
+const reviewCategoryDescriptions: Record<UnsupportedCategory, string> = {
+  animation:
+    "Animations stay in preserved CSS until animation and keyframe utilities can be mapped safely.",
+  "background-image":
+    "Background images and complex gradients need exact utilities or preserved CSS.",
+  "compound-shorthand":
+    "Some shorthand values mix multiple concerns and need manual review.",
+  "complex-selector":
+    "Complex selectors are preserved when they cannot be applied safely to one element.",
+  "container-query":
+    "Container queries are preserved because container-aware conversion is not implemented yet.",
+  "css-variable":
+    "Variable values are preserved until theme token mapping is available.",
+  "filter-effect":
+    "Filter chains are preserved when any function lacks a safe Tailwind mapping.",
+  "grid-placement":
+    "Complex grid placement stays preserved when spans or line names cannot be mapped.",
+  keyframes:
+    "Keyframes are preserved because generated animation definitions need manual migration.",
+  "media-query":
+    "Media queries outside default Tailwind breakpoints are preserved for review.",
+  "pseudo-element":
+    "Pseudo-elements create generated content and cannot be placed on the original element.",
+  "relationship-based":
+    "Related selectors may depend on document structure and should be checked in context.",
+  "tailwind-gap":
+    "These declarations map to Tailwind utility families that are not supported yet.",
+  "unsupported-property":
+    "These properties do not have a converter mapping yet.",
+  "unsupported-value":
+    "These values could not be parsed or matched safely.",
+};
+
+const reviewCategoryOrder: UnsupportedCategory[] = [
+  "relationship-based",
+  "pseudo-element",
+  "background-image",
+  "grid-placement",
+  "filter-effect",
+  "animation",
+  "keyframes",
+  "container-query",
+  "media-query",
+  "css-variable",
+  "compound-shorthand",
+  "tailwind-gap",
+  "complex-selector",
+  "unsupported-property",
+  "unsupported-value",
+];
+
+type CategoryReviewItem =
+  | {
+      status: "unsupported";
+      category: UnsupportedCategory;
+      issue: ConversionIssue;
+    }
+  | {
+      status: "preserved";
+      category: UnsupportedCategory;
+      rule: PreservedRule;
+    }
+  | {
+      status: "warnings";
+      category: UnsupportedCategory;
+      issue: ConversionIssue;
+    };
+
+const categoryLabel = (category: UnsupportedCategory) =>
+  reviewCategoryLabels[category] ?? category;
 
 function ReviewStatusDot({ status }: { status: ReviewStatus }) {
   return (
@@ -194,6 +288,40 @@ export function ReviewReport({
       reportWarningCount > 0 ||
       conversionResult.approximated.length > 0
     : false;
+  const categoryItems: CategoryReviewItem[] = [
+    ...(reviewStatus === "all" || reviewStatus === "unsupported"
+      ? filteredUnsupported.map((issue) => ({
+          status: "unsupported" as const,
+          category: issue.category,
+          issue,
+        }))
+      : []),
+    ...(reviewStatus === "all" || reviewStatus === "preserved"
+      ? filteredPreservedRules.map((rule) => ({
+          status: "preserved" as const,
+          category: rule.category,
+          rule,
+        }))
+      : []),
+    ...(reviewStatus === "all" || reviewStatus === "warnings"
+      ? filteredWarnings.map((issue) => ({
+          status: "warnings" as const,
+          category: issue.category,
+          issue,
+        }))
+      : []),
+  ];
+  const categoryGroups = reviewCategoryOrder
+    .map((category) => ({
+      category,
+      items: categoryItems.filter((item) => item.category === category),
+    }))
+    .filter((group) => group.items.length > 0);
+  const categoryStatusCounts = (items: CategoryReviewItem[]) => ({
+    unsupported: items.filter((item) => item.status === "unsupported").length,
+    preserved: items.filter((item) => item.status === "preserved").length,
+    warnings: items.filter((item) => item.status === "warnings").length,
+  });
   const clearReviewFilters = () => {
     setReviewSelector("all");
     setReviewStatus("all");
@@ -351,6 +479,130 @@ export function ReviewReport({
               </p>
             </div>
           )}
+          {categoryGroups.length > 0 && (
+            <section>
+              <h3 className="mb-2 font-medium">Migration Checklist</h3>
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {categoryGroups.map((group) => {
+                  const counts = categoryStatusCounts(group.items);
+
+                  return (
+                    <div
+                      key={`category-summary-${group.category}`}
+                      className={categorySummaryClass}
+                    >
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="font-medium">
+                          {categoryLabel(group.category)}
+                        </h4>
+                        <span className={countPillClass}>
+                          {group.items.length}
+                        </span>
+                      </div>
+                      <p className="mb-2 text-xs leading-5 text-muted-foreground">
+                        {reviewCategoryDescriptions[group.category]}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {counts.unsupported > 0 && (
+                          <ReviewBadge status="unsupported">
+                            {counts.unsupported} unsupported
+                          </ReviewBadge>
+                        )}
+                        {counts.preserved > 0 && (
+                          <ReviewBadge status="preserved">
+                            {counts.preserved} preserved
+                          </ReviewBadge>
+                        )}
+                        {counts.warnings > 0 && (
+                          <ReviewBadge status="warnings">
+                            {counts.warnings} warnings
+                          </ReviewBadge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          {categoryGroups.length > 0 && (
+            <section>
+              <h3 className="mb-2 font-medium">Review By Category</h3>
+              <div className="space-y-3">
+                {categoryGroups.map((group) => (
+                  <div
+                    key={`category-group-${group.category}`}
+                    className={reviewCardClass}
+                  >
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-medium">
+                          {categoryLabel(group.category)}
+                        </h4>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {reviewCategoryDescriptions[group.category]}
+                        </p>
+                      </div>
+                      <span className={countPillClass}>
+                        {group.items.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.items.map((item, index) => {
+                        if (item.status === "preserved") {
+                          return (
+                            <div
+                              key={`category-preserved-${group.category}-${index}`}
+                              className="rounded-md border border-border/60 bg-background/50 p-3"
+                            >
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <span className="font-medium">
+                                  {item.rule.selector}
+                                </span>
+                                <ReviewBadge status="preserved">
+                                  Preserved
+                                </ReviewBadge>
+                              </div>
+                              <p className="mb-2 text-muted-foreground">
+                                {item.rule.message}
+                              </p>
+                              <pre className="overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
+                                <code>{item.rule.css}</code>
+                              </pre>
+                            </div>
+                          );
+                        }
+
+                        const issue = item.issue;
+
+                        return (
+                          <div
+                            key={`category-issue-${group.category}-${index}`}
+                            className="rounded-md border border-border/60 bg-background/50 p-3 text-muted-foreground"
+                          >
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-foreground">
+                                {issue.selector}
+                              </span>
+                              <ReviewBadge status={item.status}>
+                                {reviewStatusLabels[item.status]}
+                              </ReviewBadge>
+                            </div>
+                            {issue.property && (
+                              <div className="mb-1 font-mono text-xs text-foreground">
+                                {issue.property}: {issue.value}
+                              </div>
+                            )}
+                            {issue.message}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           {(reviewStatus === "all" || reviewStatus === "converted") && (
             <section>
               <h3 className="mb-2 font-medium">By Selector</h3>
@@ -377,93 +629,6 @@ export function ReviewReport({
               </div>
             </section>
           )}
-          {(reviewStatus === "all" || reviewStatus === "unsupported") &&
-            filteredUnsupported.length > 0 && (
-              <section>
-                <h3 className="mb-2 font-medium">
-                  Unsupported Declarations
-                </h3>
-                <div className="space-y-2">
-                  {filteredUnsupported.map((issue, index) => (
-                    <div
-                      key={`unsupported-${index}`}
-                      className={`${reviewCardClass} text-muted-foreground`}
-                    >
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          {issue.selector}
-                        </span>
-                        <ReviewBadge status="unsupported">
-                          Unsupported
-                        </ReviewBadge>
-                        <span className={categoryPillClass}>
-                          {issue.category}
-                        </span>
-                      </div>
-                      {issue.property && (
-                        <div className="mb-1 font-mono text-xs text-foreground">
-                          {issue.property}: {issue.value}
-                        </div>
-                      )}
-                      {issue.message}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          {(reviewStatus === "all" || reviewStatus === "preserved") &&
-            filteredPreservedRules.length > 0 && (
-              <section>
-                <h3 className="mb-2 font-medium">Preserved Selectors</h3>
-                <div className="space-y-3">
-                  {filteredPreservedRules.map((rule, index) => (
-                    <div
-                      key={`preserved-${rule.selector}-${index}`}
-                      className={reviewCardClass}
-                    >
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{rule.selector}</span>
-                        <ReviewBadge status="preserved">Preserved</ReviewBadge>
-                        <span className={categoryPillClass}>
-                          {rule.category}
-                        </span>
-                      </div>
-                      <p className="mb-2 text-muted-foreground">
-                        {rule.message}
-                      </p>
-                      <pre className="overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
-                        <code>{rule.css}</code>
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          {(reviewStatus === "all" || reviewStatus === "warnings") &&
-            filteredWarnings.length > 0 && (
-              <section>
-                <h3 className="mb-2 font-medium">Warnings</h3>
-                <div className="space-y-2">
-                  {filteredWarnings.map((issue, index) => (
-                    <div
-                      key={`warning-${index}`}
-                      className={`${reviewCardClass} text-muted-foreground`}
-                    >
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          {issue.selector}
-                        </span>
-                        <ReviewBadge status="warnings">Warning</ReviewBadge>
-                        <span className={categoryPillClass}>
-                          {issue.category}
-                        </span>
-                      </div>
-                      {issue.message}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           {(reviewStatus === "all" || reviewStatus === "approximated") &&
             filteredApproximated.length > 0 && (
               <section>
