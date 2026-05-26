@@ -195,9 +195,10 @@ export const exampleSnippets: ExampleSnippet[] = [
 }
 
 .button {
-  display: inline-flex;
+  display: flex;
   justify-content: center;
-  width: 100%;
+  width: fit-content;
+  margin: 0 auto;
   padding: 0.875rem 1rem;
   border-radius: 9999px;
   background-color: #10b981;
@@ -539,6 +540,7 @@ export const exampleSnippets: ExampleSnippet[] = [
 
 .signup-form {
   width: 100%;
+  box-sizing: border-box;
   padding: 1.25rem;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
@@ -585,6 +587,7 @@ export const exampleSnippets: ExampleSnippet[] = [
 .signup-form select {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   margin-bottom: 1rem;
   padding: 0.75rem 0.875rem;
   border: 1px solid #cbd5e1;
@@ -616,7 +619,9 @@ export const exampleSnippets: ExampleSnippet[] = [
 }
 
 .signup-form button {
+  display: block;
   width: 100%;
+  box-sizing: border-box;
   padding: 0.875rem 1rem;
   border-radius: 12px;
   background-color: #4f46e5;
