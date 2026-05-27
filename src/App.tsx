@@ -124,6 +124,81 @@ function App() {
     navigator.clipboard.writeText(conversionResult.leftoverCss);
   };
 
+  const copyReviewSummary = () => {
+    if (!conversionResult) return;
+
+    const reportWarnings = conversionResult.warnings.filter(
+      (issue) => !preservedWarningCategories.has(issue.category)
+    );
+    const totalDeclarations =
+      conversionResult.converted.length +
+      conversionResult.approximated.length +
+      conversionResult.unsupported.length;
+    const directPercent =
+      totalDeclarations > 0
+        ? Math.round(
+            (conversionResult.converted.length / totalDeclarations) * 100
+          )
+        : 0;
+    const lines = [
+      "Tailwind Converter Review Summary",
+      "",
+      `Direct conversions: ${conversionResult.converted.length}`,
+      `Approximations: ${conversionResult.approximated.length}`,
+      `Unsupported declarations: ${conversionResult.unsupported.length}`,
+      `Preserved CSS rules: ${conversionResult.preservedRules.length}`,
+      `Warnings: ${reportWarnings.length}`,
+      `Direct conversion rate: ${directPercent}%`,
+    ];
+
+    if (conversionResult.approximated.length > 0) {
+      lines.push(
+        "",
+        "Approximations:",
+        ...conversionResult.approximated.map(
+          (item) =>
+            `- ${item.selector ?? "CSS"}: ${item.property}: ${item.value} -> ${item.className}`
+        )
+      );
+    }
+
+    if (conversionResult.unsupported.length > 0) {
+      lines.push(
+        "",
+        "Unsupported:",
+        ...conversionResult.unsupported.map(
+          (issue) =>
+            `- ${issue.selector}: ${issue.property ?? "CSS"}${issue.value ? `: ${issue.value}` : ""} (${issue.category})`
+        )
+      );
+    }
+
+    if (conversionResult.preservedRules.length > 0) {
+      lines.push(
+        "",
+        "Preserved CSS:",
+        ...conversionResult.preservedRules.map(
+          (rule) => `- ${rule.selector} (${rule.category})`
+        )
+      );
+    }
+
+    if (reportWarnings.length > 0) {
+      lines.push(
+        "",
+        "Warnings:",
+        ...reportWarnings.map(
+          (issue) => `- ${issue.selector} (${issue.category}): ${issue.message}`
+        )
+      );
+    }
+
+    toast("Copied review summary!", {
+      duration: 2000,
+    });
+    navigator.clipboard.writeText(lines.join("\n"));
+  };
+
   const loadExample = (example: ExampleSnippet) => {
     setHtmlText(example.html);
     setCssText(example.css);
@@ -459,6 +534,7 @@ function App() {
                     <ReviewReport
                       conversionResult={conversionResult}
                       copyLeftoverCss={copyLeftoverCss}
+                      copyReviewSummary={copyReviewSummary}
                       previewIsStale={previewIsStale}
                       reviewSelector={reviewSelector}
                       reviewStatus={reviewStatus}

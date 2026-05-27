@@ -1820,3 +1820,18 @@ test("generates composable scriptless preview css for filter utilities", () => {
     "backdrop-filter: blur(var(--tw-backdrop-blur, 0)) brightness(var(--tw-backdrop-brightness, 1))"
   );
 });
+
+test("reports selectors that do not match the provided HTML", () => {
+  const result = convertHtmlCss(
+    `<html><body><div class="card">Card</div></body></html>`,
+    `.card { padding: 1rem; }
+.unused { margin-top: 1rem; }`
+  );
+
+  expect(result.html).toContain('class="p-4"');
+  expect(result.warnings).toContainEqual({
+    selector: ".unused",
+    category: "unmatched-selector",
+    message: "This selector did not match any elements in the provided HTML.",
+  });
+});

@@ -14,6 +14,7 @@ import { preservedWarningCategories } from "@/util/review";
 type ReviewReportProps = {
   conversionResult: ConversionResult | null;
   copyLeftoverCss: () => void;
+  copyReviewSummary: () => void;
   previewIsStale: boolean;
   reviewSelector: string;
   reviewStatus: ReviewStatus;
@@ -85,6 +86,7 @@ const reviewCategoryLabels: Record<UnsupportedCategory, string> = {
   "tailwind-gap": "Tailwind Gaps",
   "unsupported-property": "Unsupported Properties",
   "unsupported-value": "Unsupported Values",
+  "unmatched-selector": "Unmatched Selectors",
 };
 
 const reviewCategoryDescriptions: Record<UnsupportedCategory, string> = {
@@ -118,10 +120,13 @@ const reviewCategoryDescriptions: Record<UnsupportedCategory, string> = {
     "These properties do not have a converter mapping yet.",
   "unsupported-value":
     "These values could not be parsed or matched safely.",
+  "unmatched-selector":
+    "These selectors exist in the CSS but do not match the provided HTML.",
 };
 
 const reviewCategoryOrder: UnsupportedCategory[] = [
   "relationship-based",
+  "unmatched-selector",
   "pseudo-element",
   "background-image",
   "grid-placement",
@@ -190,6 +195,7 @@ function ReviewBadge({
 export function ReviewReport({
   conversionResult,
   copyLeftoverCss,
+  copyReviewSummary,
   previewIsStale,
   reviewSelector,
   reviewStatus,
@@ -350,6 +356,15 @@ export function ReviewReport({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={copyReviewSummary}
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  <Copy />
+                  Copy summary
+                </Button>
                 <Button
                   onClick={() => setOutputView("preview")}
                   variant="outline"

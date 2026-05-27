@@ -71,6 +71,7 @@ export type UnsupportedCategory =
   | "compound-shorthand"
   | "filter-effect"
   | "grid-placement"
+  | "unmatched-selector"
   | "tailwind-gap";
 
 export type ConversionIssue = {
@@ -246,6 +247,10 @@ const getUnsupportedMessage = ({
 
   if (category === "grid-placement") {
     return "Grid placement is preserved. Mapping spans and line numbers to Tailwind is not implemented yet.";
+  }
+
+  if (category === "unmatched-selector") {
+    return "This selector did not match any elements in the provided HTML.";
   }
 
   if (category === "filter-effect") {
@@ -1514,6 +1519,22 @@ const consolidateSpacingClasses = (classes: string[]) => {
 const normalizeClassList = (classes: string[]) =>
   consolidateSpacingClasses(Array.from(new Set(classes)));
 
+const findUnmatchedSelectors = (html: string, selectors: string[]) => {
+  const sanitizedHtml = DOMPurify.sanitize(html);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(sanitizedHtml, "text/html");
+
+  return Array.from(new Set(selectors)).filter((selector) => {
+    if (!selector || /[@{}]/.test(selector)) return false;
+
+    try {
+      return doc.querySelectorAll(selector).length === 0;
+    } catch {
+      return false;
+    }
+  });
+};
+
 interface ClassObject {
   [selector: string]:
     | string
@@ -1613,6 +1634,17 @@ export const convertHtmlCss = (
   const classObjects = Array.from(selectorClasses).map(([selector, value]) => ({
     [selector]: value,
   }));
+  const unmatchedSelectorWarnings: ConversionIssue[] = findUnmatchedSelectors(
+    html,
+    rules.filter((rule) => rule.canApply).map((rule) => rule.selector)
+  ).map((selector) => ({
+    selector,
+    category: "unmatched-selector",
+    message: getUnsupportedMessage({
+      category: "unmatched-selector",
+      fallbackMessage: "This selector did not match any elements in the provided HTML.",
+    }),
+  }));
   const convertedHtml = addLeftoverCss(parser(html, classObjects), leftoverCss);
   const convertedDeclarations = rules.flatMap((rule) => rule.declarations);
   const unsupportedDeclarations = unsupported.map((issue) => ({
@@ -1632,7 +1664,7 @@ export const convertHtmlCss = (
     converted: declarations.filter((item) => item.status === "converted"),
     approximated: declarations.filter((item) => item.status === "approximated"),
     unsupported,
-    warnings,
+    warnings: [...warnings, ...unmatchedSelectorWarnings],
     leftoverCss,
   };
 };
