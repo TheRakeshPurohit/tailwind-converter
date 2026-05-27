@@ -7,6 +7,12 @@ import {
   sanitizePreviewCss,
   sanitizePreviewHtml,
 } from "../src/util/preview";
+import {
+  buildShareUrl,
+  decodeShareState,
+  encodeShareState,
+  readShareStateFromHash,
+} from "../src/util/share-state";
 import { css_beautify, html_beautify } from "js-beautify";
 
 test("adds 1 + 2 to equal 3", () => {
@@ -1834,4 +1840,18 @@ test("reports selectors that do not match the provided HTML", () => {
     category: "unmatched-selector",
     message: "This selector did not match any elements in the provided HTML.",
   });
+});
+
+test("encodes and decodes shareable conversion links", () => {
+  const state = {
+    html: `<section class="hero">Launch ✓</section>`,
+    css: `.hero { padding: 1rem; color: #2563eb; }`,
+    mode: "exact" as const,
+  };
+  const payload = encodeShareState(state);
+  const url = buildShareUrl(state, "https://example.com/converter");
+
+  expect(decodeShareState(payload)).toEqual(state);
+  expect(readShareStateFromHash(new URL(url).hash)).toEqual(state);
+  expect(url).toContain("#share=");
 });

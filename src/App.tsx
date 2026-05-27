@@ -20,6 +20,7 @@ import {
   Eye,
   FileWarning,
   GalleryVerticalEnd,
+  Share2,
   Undo,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -40,6 +41,7 @@ import { SeoContent } from "./components/seo-content";
 import { exampleSnippets } from "./data/example-snippets";
 import type { ExampleSnippet } from "./data/example-snippets";
 import { preservedWarningCategories } from "./util/review";
+import { buildShareUrl, readShareStateFromHash } from "./util/share-state";
 import type {
   OutputView,
   PreviewMode,
@@ -56,11 +58,16 @@ const segmentedButtonClass = (isSelected: boolean, className?: string) =>
   );
 
 function App() {
-  const [htmlText, setHtmlText] = useState("");
-  const [cssText, setCssText] = useState("");
+  const sharedConversion = useRef(readShareStateFromHash(window.location.hash));
+  const [htmlText, setHtmlText] = useState(
+    () => sharedConversion.current?.html ?? localStorage.html ?? initialHTML
+  );
+  const [cssText, setCssText] = useState(
+    () => sharedConversion.current?.css ?? localStorage.css ?? initialCSS
+  );
   const [tailwindText, setTailwindText] = useState("");
   const [conversionMode, setConversionMode] =
-    useState<ConversionMode>("tokens");
+    useState<ConversionMode>(sharedConversion.current?.mode ?? "tokens");
   const [conversionResult, setConversionResult] =
     useState<ConversionResult | null>(null);
   const [outputView, setOutputView] = useState<OutputView>("html");
@@ -114,6 +121,20 @@ function App() {
       duration: 2000,
     });
     navigator.clipboard.writeText(tailwindText);
+  };
+
+  const copyShareLink = () => {
+    const shareUrl = buildShareUrl({
+      html: htmlText,
+      css: cssText,
+      mode: conversionMode,
+    });
+
+    window.history.replaceState(null, "", shareUrl);
+    toast("Copied share link!", {
+      duration: 2000,
+    });
+    navigator.clipboard.writeText(shareUrl);
   };
 
   const copyLeftoverCss = () => {
@@ -215,6 +236,13 @@ function App() {
     setHtmlText(initialHTML);
     setCssText(initialCSS);
     setLoadedExampleName("");
+    if (readShareStateFromHash(window.location.hash)) {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`
+      );
+    }
   };
 
   const updateConversionMode = (mode: ConversionMode) => {
@@ -273,19 +301,16 @@ function App() {
     (lastConversionInput.html !== htmlText ||
       lastConversionInput.css !== cssText);
 
-  useEffect(
-    () => setCssText(localStorage.css ? localStorage.css : initialCSS),
-    []
-  );
-  useEffect(
-    () => setHtmlText(localStorage.html ? localStorage.html : initialHTML),
-    []
-  );
-
   useEffect(() => {
     if (!firstSync.current && htmlText && cssText) {
       setTailwindText(getNewHtml(htmlText, cssText));
       firstSync.current = true;
+      if (sharedConversion.current) {
+        setOutputView("review");
+        toast("Loaded shared conversion", {
+          duration: 2000,
+        });
+      }
     }
   }, [htmlText, cssText, getNewHtml]);
 
@@ -396,6 +421,15 @@ function App() {
                       className="mt-3 -ml-3 cursor-pointer dark:hover:bg-gray-700"
                     >
                       <Copy />
+                    </Button>
+                    <Button
+                      onClick={copyShareLink}
+                      variant="ghost"
+                      size="icon"
+                      aria-label="copy share link"
+                      className="mt-3 cursor-pointer dark:hover:bg-gray-700"
+                    >
+                      <Share2 />
                     </Button>
                   </div>
                   <div className="flex flex-wrap justify-end">
