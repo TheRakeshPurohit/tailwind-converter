@@ -2,6 +2,8 @@
 
 Tailwind Converter helps migrate plain HTML and CSS into HTML with Tailwind CSS classes. It is designed as a migration assistant: it converts what can be mapped safely, approximates values when requested, and preserves unsupported CSS for review instead of silently dropping it.
 
+Check out my other project, [ffwrapped](https://ffwrapped.com).
+
 The app targets Tailwind CSS v4 and uses a CSS-first Vite setup.
 
 ## Features

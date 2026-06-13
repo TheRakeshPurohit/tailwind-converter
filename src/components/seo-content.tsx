@@ -61,8 +61,12 @@ export function SeoContent() {
               <li>
                 5. Safe shorthands are expanded before declaration conversion.
               </li>
-              <li>6. Supported declarations become Tailwind utility classes.</li>
-              <li>7. Unsupported CSS is preserved in a leftover style block.</li>
+              <li>
+                6. Supported declarations become Tailwind utility classes.
+              </li>
+              <li>
+                7. Unsupported CSS is preserved in a leftover style block.
+              </li>
             </ol>
           </section>
 
@@ -76,6 +80,18 @@ export function SeoContent() {
               transform declarations while making uncertain cases visible. It is
               especially useful when moving older HTML and CSS, copied examples,
               or generated static templates into a Tailwind CSS project.
+            </p>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              Check out my other project,{" "}
+              <a
+                href="https://ffwrapped.com"
+                target="_blank"
+                rel="me noreferrer"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                ffwrapped
+              </a>
+              .
             </p>
           </section>
         </div>
